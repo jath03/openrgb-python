@@ -2,24 +2,16 @@
 import socket
 import struct
 import threading
+import constants
 # from dataclasses import dataclass
 from time import sleep
 
-
-NET_PACKET_ID_REQUEST_CONTROLLER_COUNT = 0
-NET_PACKET_ID_REQUEST_CONTROLLER_DATA = 1
-NET_PACKET_ID_SET_CLIENT_NAME = 50
-NET_PACKET_ID_RGBCONTROLLER_RESIZEZONE = 1000
-NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS = 1050
-NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS = 1051
-NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED = 1052
-NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE = 1100
-NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
-
 HEADER_SIZE = 16
+
 
 def intToRGB(color: int):
     return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
+
 
 class NetworkClient(object):
     def __init__(self, update_callback, address="127.0.0.1", port=1337):
@@ -43,11 +35,11 @@ class NetworkClient(object):
 
         # Sending the client name
         name = b"python\0"
-        self.send_header(0, NET_PACKET_ID_SET_CLIENT_NAME, len(name))
+        self.send_header(0, constants.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
         self.sock.send(name, socket.MSG_NOSIGNAL)
 
         # Requesting the number of devices
-        self.send_header(0, NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
+        self.send_header(0, constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
 
     def listen(self):
         while True:
@@ -61,17 +53,17 @@ class NetworkClient(object):
             if buff[:4] == [b'O', b'R', b'G', b'B']:
                 device_id, packet_type, packet_size = buff[4:]
                 # print(device_id, packet_type, packet_size)
-                if packet_type == NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+                if packet_type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
                     self.callback(device_id, packet_type, buff[0])
-                elif packet_type == NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+                elif packet_type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                     data = bytearray(packet_size)
                     self.sock.recv_into(data)
                     self.parseDeviceDescription(data)
             sleep(.2)
 
     def requestDeviceData(self, device: int):
-        self.send_header(device, NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
+        self.send_header(device, constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
 
     def parseDeviceDescription(self, data):
         buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
@@ -163,9 +155,8 @@ class OpenRGBClient(object):
             self.comms.requestDeviceData(x)
 
     def callback(self, device: int, type: int, data):
-        if type == NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+        if type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
             self.device_num = data
-
 
 
 if __name__ == "__main__":
