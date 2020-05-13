@@ -42,7 +42,7 @@ class NetworkClient(object):
     def listen(self):
         while True:
             bytes_read = 0
-            header = bytearray(HEADER_SIZE)
+            header = bytearray(constants.HEADER_SIZE)
             self.sock.recv_into(header)
 
             # Unpacking the contents of the raw header struct into a list
