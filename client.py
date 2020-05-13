@@ -18,6 +18,8 @@ NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
 
 HEADER_SIZE = 16
 
+def intToRGB(color: int):
+    return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
 
 class NetworkClient(object):
     def __init__(self, update_callback, address="127.0.0.1", port=1337):
@@ -86,11 +88,13 @@ class NetworkClient(object):
         modes = []
         for x in range(num_modes):
             location, val = self.parseSizeAndString(data, location)
-            buff = struct.unpack("iIIIIIIIIH", data[location:location + struct.calcsize("iIIIIIIIIH")])
-            location += struct.calcsize("iIIIIIIIIH")
+            buff = list(struct.unpack("i8IH", data[location:location + struct.calcsize("i8IH")]))
+            location += struct.calcsize("i8IH")
+            buff[4] = intToRGB(buff[4])
+            buff[5] = intToRGB(buff[5])
             colors = []
             for x in range(buff[-1]):
-                colors.append(struct.unpack("I", data[location:location + struct.calcsize("I")]))
+                colors.append(intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])))
                 location += struct.calcsize('I')
             modes.append([val.strip('\x00'), *buff, colors])
         num_zones = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
@@ -125,16 +129,16 @@ class NetworkClient(object):
         for x in range(num_colors):
             color = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
             location += struct.calcsize("I")
-            colors.append(color)
-        print("Device Information:\n", "\t", "Device type:", device_type, "\n\t", end="")
+            colors.append(intToRGB((color)))
+        print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
         print(*metadata, sep="\n\t")
-        print("Mode Information:\n", "\t", "Number of modes:", num_modes, "\n\t", "Active Mode:", active_mode, "\n\t", end="")
+        print("Mode Information:\n", "\tNumber of modes:", num_modes, "\n\tActive Mode:", active_mode, "\n\t", end="")
         print(*modes, sep='\n\t')
-        print("Zone Information:\n", "\t", "Number of zones:", num_zones, "\n\t", end="")
+        print("Zone Information:\n", "\tNumber of zones:", num_zones, "\n\t", end="")
         print(*zones, sep='\n\t')
-        print("LED Information:\n", "\t", "Number of LEDs:", num_leds, "\n\t", end="")
+        print("LED Information:\n", "\tNumber of LEDs:", num_leds, "\n\t", end="")
         print(*leds, sep="\n\t")
-        print("Color Information:\n", "\t", "Number of Colors:", num_colors, "\n\t", end="")
+        print("Color Information:\n", "\tNumber of Colors:", num_colors, "\n\t", end="")
         print(*colors, sep="\n\t")
         print("---------------------------------")
 
