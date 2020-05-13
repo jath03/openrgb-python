@@ -3,12 +3,21 @@ import socket
 import struct
 import threading
 import constants
+from typing import NamedTuple
 # from dataclasses import dataclass
 from time import sleep
 
 
 def intToRGB(color: int):
     return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
+
+
+class ControllerData(NamedTuple):
+    pass
+
+
+class RGBController(object):
+    pass
 
 
 class NetworkClient(object):
@@ -131,6 +140,7 @@ class NetworkClient(object):
         print("Color Information:\n", "\tNumber of Colors:", num_colors, "\n\t", end="")
         print(*colors, sep="\n\t")
         print("---------------------------------")
+        return ControllerData()
 
     def parseSizeAndString(self, data, start=0):
         size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
@@ -146,6 +156,7 @@ class NetworkClient(object):
 class OpenRGBClient(object):
     def __init__(self, address="127.0.0.1", port=1337):
         self.comms = NetworkClient(self.callback)
+        self.devices = []
         self.device_num = 0
         while self.device_num == 0:
             sleep(.2)
@@ -155,6 +166,8 @@ class OpenRGBClient(object):
     def callback(self, device: int, type: int, data):
         if type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
             self.device_num = data
+        elif type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+            self.devices.append(RGBController(data))
 
 
 if __name__ == "__main__":
