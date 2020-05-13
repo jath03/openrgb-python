@@ -2,7 +2,7 @@
 import socket
 import struct
 import threading
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from time import sleep
 
 
