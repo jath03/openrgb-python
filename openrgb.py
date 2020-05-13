@@ -154,6 +154,10 @@ class RGBController(object):
         self.data = data
         self.id = device_id
         self.comms = network_client
+    def __str__(self):
+        return self.data.name
+    def __repr__(self):
+        return f"RGBController({self.data.name}, id={self.id})"
 
 
 class OpenRGBClient(object):
@@ -178,3 +182,6 @@ class OpenRGBClient(object):
 
 if __name__ == "__main__":
     client = OpenRGBClient()
+    sleep(1)
+    for controller in client.devices:
+        print(controller, "ID: " + str(controller.id), controller.data.device_type, sep='\n\t')
