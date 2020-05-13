@@ -1,5 +1,8 @@
 from enum import Enum, IntEnum, IntFlag
 
+HEADER_SIZE = 16
+
+
 class ModeFlags(IntFlag):
     MODE_FLAG_HAS_SPEED = (1 << 0)
     MODE_FLAG_HAS_DIRECTION_LR = (1 << 1)
@@ -10,6 +13,7 @@ class ModeFlags(IntFlag):
     MODE_FLAG_HAS_MODE_SPECIFIC_COLOR = (1 << 6)
     MODE_FLAG_HAS_RANDOM_COLOR = (1 << 7)
 
+
 class ModeDirections(Enum):
     MODE_DIRECTION_LEFT = 0
     MODE_DIRECTION_RIGHT = 1
@@ -18,11 +22,13 @@ class ModeDirections(Enum):
     MODE_DIRECTION_HORIZONTAL = 4
     MODE_DIRECTION_VERTICAL = 5
 
+
 class ModeColors(Enum):
     MODE_COLORS_NONE = 0
     MODE_COLORS_PER_LED = 1
     MODE_COLORS_MODE_SPECIFIC = 2
     MODE_COLORS_RANDOM = 3
+
 
 class DeviceType(Enum):
     DEVICE_TYPE_MOTHERBOARD = 0
@@ -35,6 +41,7 @@ class DeviceType(Enum):
     DEVICE_TYPE_MOUSEMAT = 7
     DEVICE_TYPE_HEADSET = 8
     DEVICE_TYPE_UNKNOWN = 9
+
 
 class PacketType(IntEnum):
     NET_PACKET_ID_REQUEST_CONTROLLER_COUNT = 0

@@ -6,8 +6,6 @@ import constants
 # from dataclasses import dataclass
 from time import sleep
 
-HEADER_SIZE = 16
-
 
 def intToRGB(color: int):
     return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
