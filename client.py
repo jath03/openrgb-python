@@ -11,13 +11,29 @@ from time import sleep
 def intToRGB(color: int):
     return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
 
+class LEDData(NamedTuple):
+    name: str
+
+
+
+class ZoneData(NamedTuple):
+    name: str
+    zone_type: constants.ZoneType
+
+
 
 class ControllerData(NamedTuple):
-    pass
-
-
-class RGBController(object):
-    pass
+    name: str
+    description: str
+    version: str
+    serial: str
+    location: str
+    device_type: constants.DeviceType
+    leds: list
+    zones: list
+    modes: list
+    colors: list
+    active_mode: int
 
 
 class NetworkClient(object):
@@ -66,7 +82,7 @@ class NetworkClient(object):
                 elif packet_type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                     data = bytearray(packet_size)
                     self.sock.recv_into(data)
-                    self.parseDeviceDescription(data)
+                    self.callback(device_id, packet_type, self.parseDeviceDescription(data))
             sleep(.2)
 
     def requestDeviceData(self, device: int):
@@ -93,7 +109,7 @@ class NetworkClient(object):
             buff[5] = intToRGB(buff[5])
             colors = []
             for x in range(buff[-1]):
-                colors.append(intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])))
+                colors.append(intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])[0]))
                 location += struct.calcsize('I')
             modes.append([val.strip('\x00'), *buff, colors])
         num_zones = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
@@ -101,8 +117,9 @@ class NetworkClient(object):
         zones = []
         for x in range(num_zones):
             location, val = self.parseSizeAndString(data, location)
-            buff = struct.unpack("iIIIH", data[location:location + struct.calcsize("iIIIH")])
+            buff = list(struct.unpack("iIIIH", data[location:location + struct.calcsize("iIIIH")]))
             location += struct.calcsize("iIIIH")
+
             height, width = 0, 0
             matrix = [[]]
             if buff[-1] > 0:
@@ -140,7 +157,15 @@ class NetworkClient(object):
         print("Color Information:\n", "\tNumber of Colors:", num_colors, "\n\t", end="")
         print(*colors, sep="\n\t")
         print("---------------------------------")
-        return ControllerData()
+        return ControllerData(
+            *metadata,
+            constants.DeviceType(device_type),
+            leds,
+            zones,
+            modes,
+            colors,
+            active_mode
+        )
 
     def parseSizeAndString(self, data, start=0):
         size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
@@ -153,13 +178,20 @@ class NetworkClient(object):
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
 
 
+class RGBController(object):
+    def __init__(self, data: ControllerData, device_id: int, network_client: NetworkClient):
+        self.data = data
+        self.id = device_id
+        self.comms = network_client
+
+
 class OpenRGBClient(object):
     def __init__(self, address="127.0.0.1", port=1337):
         self.comms = NetworkClient(self.callback)
-        self.devices = []
         self.device_num = 0
         while self.device_num == 0:
             sleep(.2)
+        self.devices = [None for x in range(self.device_num)]
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
 
@@ -167,7 +199,10 @@ class OpenRGBClient(object):
         if type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
             self.device_num = data
         elif type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
-            self.devices.append(RGBController(data))
+            if self.devices[device] is None:
+                self.devices[device] = RGBController(data, device, self.comms)
+            else:
+                self.devices[device].data = data
 
 
 if __name__ == "__main__":

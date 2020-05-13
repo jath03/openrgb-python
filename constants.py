@@ -30,7 +30,7 @@ class ModeColors(Enum):
     MODE_COLORS_RANDOM = 3
 
 
-class DeviceType(Enum):
+class DeviceType(IntEnum):
     DEVICE_TYPE_MOTHERBOARD = 0
     DEVICE_TYPE_DRAM = 1
     DEVICE_TYPE_GPU = 2
@@ -41,6 +41,12 @@ class DeviceType(Enum):
     DEVICE_TYPE_MOUSEMAT = 7
     DEVICE_TYPE_HEADSET = 8
     DEVICE_TYPE_UNKNOWN = 9
+
+
+class ZoneType(IntEnum):
+    ZONE_TYPE_SINGLE = 0
+    ZONE_TYPE_LINEAR = 1
+    ZONE_TYPE_MATRIX = 2
 
 
 class PacketType(IntEnum):
