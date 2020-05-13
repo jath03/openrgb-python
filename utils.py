@@ -1,4 +1,5 @@
-from enum import Enum, IntEnum, IntFlag
+from enum import IntEnum, IntFlag
+from typing import NamedTuple, List
 
 HEADER_SIZE = 16
 
@@ -14,7 +15,7 @@ class ModeFlags(IntFlag):
     MODE_FLAG_HAS_RANDOM_COLOR = (1 << 7)
 
 
-class ModeDirections(Enum):
+class ModeDirections(IntEnum):
     MODE_DIRECTION_LEFT = 0
     MODE_DIRECTION_RIGHT = 1
     MODE_DIRECTION_UP = 2
@@ -23,7 +24,7 @@ class ModeDirections(Enum):
     MODE_DIRECTION_VERTICAL = 5
 
 
-class ModeColors(Enum):
+class ModeColors(IntEnum):
     MODE_COLORS_NONE = 0
     MODE_COLORS_PER_LED = 1
     MODE_COLORS_MODE_SPECIFIC = 2
@@ -59,3 +60,60 @@ class PacketType(IntEnum):
     NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED = 1052
     NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE = 1100
     NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
+
+
+class RGBColor(NamedTuple):
+    red: int
+    green: int
+    blue: int
+
+
+def intToRGB(color: int):
+    return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
+
+
+class LEDData(NamedTuple):
+    name: str
+    value: int
+
+
+class ModeData(NamedTuple):
+    name: str
+    value: int
+    flags: ModeFlags
+    speed_min: int
+    speed_max: int
+    colors_min: int
+    colors_max: int
+    speed: int
+    direction: ModeDirections
+    color_mode: ModeColors
+    colors: List[RGBColor]
+
+
+class ZoneData(NamedTuple):
+    name: str
+    zone_type: ZoneType
+    leds_min: int
+    leds_max: int
+    num_leds: int
+    mat_height: int
+    mat_width: int
+    matrix_map: List[list] = None
+    leds: List[LEDData] = None
+    colors: List[RGBColor] = None
+    start_idx: int = None
+
+
+class ControllerData(NamedTuple):
+    name: str
+    description: str
+    version: str
+    serial: str
+    location: str
+    device_type: DeviceType
+    leds: list
+    zones: list
+    modes: list
+    colors: list
+    active_mode: int

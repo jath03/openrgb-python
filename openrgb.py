@@ -2,38 +2,9 @@
 import socket
 import struct
 import threading
-import constants
-from typing import NamedTuple
+import utils
 # from dataclasses import dataclass
 from time import sleep
-
-
-def intToRGB(color: int):
-    return (color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
-
-class LEDData(NamedTuple):
-    name: str
-
-
-
-class ZoneData(NamedTuple):
-    name: str
-    zone_type: constants.ZoneType
-
-
-
-class ControllerData(NamedTuple):
-    name: str
-    description: str
-    version: str
-    serial: str
-    location: str
-    device_type: constants.DeviceType
-    leds: list
-    zones: list
-    modes: list
-    colors: list
-    active_mode: int
 
 
 class NetworkClient(object):
@@ -52,22 +23,22 @@ class NetworkClient(object):
                     raise
 
         self.listener = threading.Thread(target=self.listen)
+        self.listener.daemon = True
         self.listener.start()
 
         self.callback = update_callback
 
         # Sending the client name
         name = b"python\0"
-        self.send_header(0, constants.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
+        self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
         self.sock.send(name, socket.MSG_NOSIGNAL)
 
         # Requesting the number of devices
-        self.send_header(0, constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
+        self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
 
     def listen(self):
         while True:
-            bytes_read = 0
-            header = bytearray(constants.HEADER_SIZE)
+            header = bytearray(utils.HEADER_SIZE)
             self.sock.recv_into(header)
 
             # Unpacking the contents of the raw header struct into a list
@@ -76,17 +47,17 @@ class NetworkClient(object):
             if buff[:4] == [b'O', b'R', b'G', b'B']:
                 device_id, packet_type, packet_size = buff[4:]
                 # print(device_id, packet_type, packet_size)
-                if packet_type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+                if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
                     self.callback(device_id, packet_type, buff[0])
-                elif packet_type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+                elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                     data = bytearray(packet_size)
                     self.sock.recv_into(data)
                     self.callback(device_id, packet_type, self.parseDeviceDescription(data))
             sleep(.2)
 
     def requestDeviceData(self, device: int):
-        self.send_header(device, constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
+        self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
 
     def parseDeviceDescription(self, data):
         buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
@@ -105,13 +76,13 @@ class NetworkClient(object):
             location, val = self.parseSizeAndString(data, location)
             buff = list(struct.unpack("i8IH", data[location:location + struct.calcsize("i8IH")]))
             location += struct.calcsize("i8IH")
-            buff[4] = intToRGB(buff[4])
-            buff[5] = intToRGB(buff[5])
+            buff[4] = utils.intToRGB(buff[4])
+            buff[5] = utils.intToRGB(buff[5])
             colors = []
             for x in range(buff[-1]):
-                colors.append(intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])[0]))
+                colors.append(utils.intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])[0]))
                 location += struct.calcsize('I')
-            modes.append([val.strip('\x00'), *buff, colors])
+            modes.append(utils.ModeData(val.strip('\x00'), buff[0], utils.ModeFlags(buff[1]), *buff[2:7], utils.ModeDirections(buff[8]), utils.ModeColors(buff[9]), colors))
         num_zones = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
         location += struct.calcsize("H")
         zones = []
@@ -130,7 +101,7 @@ class NetworkClient(object):
                     for x in range(width):
                         matrix[y][x] = struct.unpack("I", data[location:location + struct.calcsize("I")])
                         location += struct.calcsize("I")
-            zones.append([val.strip('\x00'), *buff, width, height, matrix])
+            zones.append(utils.ZoneData(val.strip('\x00'), utils.ZoneType(buff[0]), *buff[1:-1], height, width, matrix))
         num_leds = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
         location += struct.calcsize("H")
         leds = []
@@ -138,28 +109,28 @@ class NetworkClient(object):
             location, name = self.parseSizeAndString(data, location)
             value = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
             location += struct.calcsize("I")
-            leds.append([name.strip("\x00"), value])
+            leds.append(utils.LEDData(name.strip("\x00"), value))
         num_colors = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
         location += struct.calcsize("H")
         colors = []
         for x in range(num_colors):
             color = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
             location += struct.calcsize("I")
-            colors.append(intToRGB((color)))
-        print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
-        print(*metadata, sep="\n\t")
-        print("Mode Information:\n", "\tNumber of modes:", num_modes, "\n\tActive Mode:", active_mode, "\n\t", end="")
-        print(*modes, sep='\n\t')
-        print("Zone Information:\n", "\tNumber of zones:", num_zones, "\n\t", end="")
-        print(*zones, sep='\n\t')
-        print("LED Information:\n", "\tNumber of LEDs:", num_leds, "\n\t", end="")
-        print(*leds, sep="\n\t")
-        print("Color Information:\n", "\tNumber of Colors:", num_colors, "\n\t", end="")
-        print(*colors, sep="\n\t")
-        print("---------------------------------")
-        return ControllerData(
+            colors.append(utils.intToRGB((color)))
+        # print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
+        # print(*metadata, sep="\n\t")
+        # print("Mode Information:\n", "\tNumber of modes:", num_modes, "\n\tActive Mode:", active_mode, "\n\t", end="")
+        # print(*modes, sep='\n\t')
+        # print("Zone Information:\n", "\tNumber of zones:", num_zones, "\n\t", end="")
+        # print(*zones, sep='\n\t')
+        # print("LED Information:\n", "\tNumber of LEDs:", num_leds, "\n\t", end="")
+        # print(*leds, sep="\n\t")
+        # print("Color Information:\n", "\tNumber of Colors:", num_colors, "\n\t", end="")
+        # print(*colors, sep="\n\t")
+        # print("---------------------------------")
+        return utils.ControllerData(
             *metadata,
-            constants.DeviceType(device_type),
+            utils.DeviceType(device_type),
             leds,
             zones,
             modes,
@@ -172,14 +143,14 @@ class NetworkClient(object):
         start += struct.calcsize("H")
         val = struct.unpack(f"{size}s", data[start:start + size])[0].decode()
         start += size
-        return start, val
+        return start, val.strip("\x00")
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
 
 
 class RGBController(object):
-    def __init__(self, data: ControllerData, device_id: int, network_client: NetworkClient):
+    def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
         self.data = data
         self.id = device_id
         self.comms = network_client
@@ -196,9 +167,9 @@ class OpenRGBClient(object):
             self.comms.requestDeviceData(x)
 
     def callback(self, device: int, type: int, data):
-        if type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+        if type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
             self.device_num = data
-        elif type == constants.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+        elif type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
             if self.devices[device] is None:
                 self.devices[device] = RGBController(data, device, self.comms)
             else:
