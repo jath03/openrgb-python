@@ -1,5 +1,7 @@
 from enum import IntEnum, IntFlag
-from typing import NamedTuple, List
+from typing import List, TypeVar, Type
+from dataclasses import dataclass
+from struct import pack, unpack
 
 HEADER_SIZE = 16
 
@@ -61,23 +63,42 @@ class PacketType(IntEnum):
     NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE = 1100
     NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
 
+CT = TypeVar("CT", bound="RGBColor")
 
-class RGBColor(NamedTuple):
+
+@dataclass
+class RGBColor(object):
     red: int
     green: int
     blue: int
 
+    def pack(self) -> bytearray:
+        return pack("BBBx", self.red, self.green, self.blue)
 
-def intToRGB(color: int):
+    @classmethod
+    def unpack(cls: Type[CT], data: bytearray) -> CT:
+        r, g, b = unpack("BBBx", data)
+        return RGBColor(r, g, b)
+
+
+def intToRGB(color: int) -> RGBColor:
     return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
 
 
-class LEDData(NamedTuple):
+def RGBtoInt(color: RGBColor) -> int:
+    return ((color.blue << 16) | (color.green << 8) | (color.red))
+
+# print((int.from_bytes(RGBColor(100, 200, 10).pack(), "big") >> 16) & 0x000000FF)
+
+
+@dataclass
+class LEDData(object):
     name: str
     value: int
 
 
-class ModeData(NamedTuple):
+@dataclass
+class ModeData(object):
     name: str
     value: int
     flags: ModeFlags
@@ -91,7 +112,8 @@ class ModeData(NamedTuple):
     colors: List[RGBColor]
 
 
-class ZoneData(NamedTuple):
+@dataclass
+class ZoneData(object):
     name: str
     zone_type: ZoneType
     leds_min: int
@@ -105,7 +127,8 @@ class ZoneData(NamedTuple):
     start_idx: int = None
 
 
-class ControllerData(NamedTuple):
+@dataclass
+class ControllerData(object):
     name: str
     description: str
     version: str

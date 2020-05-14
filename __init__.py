@@ -2,25 +2,26 @@
 import socket
 import struct
 import threading
-import utils
+from openrgb import utils
+from typing import Callable
 # from dataclasses import dataclass
 from time import sleep
 
 
 class NetworkClient(object):
-    def __init__(self, update_callback, address="127.0.0.1", port=1337):
+    def __init__(self, update_callback: Callable, address="127.0.0.1", port=1337):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         for x in range(5):
             try:
                 self.sock.connect((address, port))
                 break
             except ConnectionRefusedError:
-                if x < 4:
-                    print("Unable to connect.  Is the OpenRGB SDK server started?")
-                    print("Retrying in 5 seconds...\n")
-                    sleep(5)
-                elif x == 4:
-                    raise
+                # if x < 4:
+                print("Unable to connect.  Is the OpenRGB SDK server started?")
+                print("Retrying in 5 seconds...\n")
+                sleep(5)
+                # elif x == 4:
+                #     raise
 
         self.listener = threading.Thread(target=self.listen)
         self.listener.daemon = True
@@ -37,29 +38,32 @@ class NetworkClient(object):
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
 
     def listen(self):
-        while True:
-            header = bytearray(utils.HEADER_SIZE)
-            self.sock.recv_into(header)
+        try:
+            while True:
+                header = bytearray(utils.HEADER_SIZE)
+                self.sock.recv_into(header)
 
-            # Unpacking the contents of the raw header struct into a list
-            buff = list(struct.unpack('ccccIII', header))
-            # print(buff[:4])
-            if buff[:4] == [b'O', b'R', b'G', b'B']:
-                device_id, packet_type, packet_size = buff[4:]
-                # print(device_id, packet_type, packet_size)
-                if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
-                    buff = struct.unpack("I", self.sock.recv(packet_size))
-                    self.callback(device_id, packet_type, buff[0])
-                elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
-                    data = bytearray(packet_size)
-                    self.sock.recv_into(data)
-                    self.callback(device_id, packet_type, self.parseDeviceDescription(data))
-            sleep(.2)
+                # Unpacking the contents of the raw header struct into a list
+                buff = list(struct.unpack('ccccIII', header))
+                # print(buff[:4])
+                if buff[:4] == [b'O', b'R', b'G', b'B']:
+                    device_id, packet_type, packet_size = buff[4:]
+                    # print(device_id, packet_type, packet_size)
+                    if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+                        buff = struct.unpack("I", self.sock.recv(packet_size))
+                        self.callback(device_id, packet_type, buff[0])
+                    elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+                        data = bytearray(packet_size)
+                        self.sock.recv_into(data)
+                        self.callback(device_id, packet_type, self.parseDeviceDescription(data))
+                sleep(.2)
+        except BrokenPipeError:
+            raise Exception("Disconnected.  Did you disable the SDK?")
 
     def requestDeviceData(self, device: int):
         self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
 
-    def parseDeviceDescription(self, data):
+    def parseDeviceDescription(self, data: bytearray) -> utils.ControllerData:
         buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
         location = struct.calcsize("Ii")
         device_type = buff[1]
@@ -154,10 +158,29 @@ class RGBController(object):
         self.data = data
         self.id = device_id
         self.comms = network_client
+
     def __str__(self):
         return self.data.name
+
     def __repr__(self):
-        return f"RGBController({self.data.name}, id={self.id})"
+        return f"RGBController(name={self.data.name}, id={self.id})"
+
+    def set_color(self, color: utils.RGBColor, start=0, end=0):
+        if end == 0:
+            end = len(self.data.leds)
+        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
+        buff = struct.pack("H", end - start) + (color.pack())*(end - start)
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
+
+    def set_led_color(self, led: int, color: utils.RGBColor):
+        if led > len(self.data.leds):
+            raise IndexError("LED out of range")
+        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize(f"iBBBx"))
+        self.comms.sock.send(struct.pack("i", led) + color.pack())
+
+    def clear(self):
+        self.set_color(utils.RGBColor(0, 0, 0))
 
 
 class OpenRGBClient(object):
@@ -169,6 +192,7 @@ class OpenRGBClient(object):
         self.devices = [None for x in range(self.device_num)]
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
+        sleep(1) # Giving the client time to recieve the device data
 
     def callback(self, device: int, type: int, data):
         if type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
@@ -179,9 +203,17 @@ class OpenRGBClient(object):
             else:
                 self.devices[device].data = data
 
+    def set_color(self, color: utils.RGBColor):
+        for device in self.devices:
+            device.set_color(color)
+
+    def clear(self):
+        self.set_color(utils.RGBColor(0, 0, 0))
+
+__all__ = ['utils']
 
 if __name__ == "__main__":
     client = OpenRGBClient()
-    sleep(1)
     for controller in client.devices:
         print(controller, "ID: " + str(controller.id), controller.data.device_type, sep='\n\t')
+    # client.devices[4].set_led_color(1, utils.RGBColor(0, 255, 0))
