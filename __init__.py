@@ -184,8 +184,8 @@ class RGBController(object):
 
 
 class OpenRGBClient(object):
-    def __init__(self, address="127.0.0.1", port=1337):
-        self.comms = NetworkClient(self.callback)
+    def __init__(self, address: str = "127.0.0.1", port: int = 1337):
+        self.comms = NetworkClient(self.callback, address, port)
         self.device_num = 0
         while self.device_num == 0:
             sleep(.2)
