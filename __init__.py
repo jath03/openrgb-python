@@ -173,6 +173,16 @@ class RGBController(object):
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
 
+    def set_colors(self, colors: List(utils.RGBColor), start=0, end=0):
+        if end == 0:
+            end = len(self.data.leds)
+        if len(colors) != (end - start):
+            raise IndexError("Number of colors doesn't match number of LEDs")
+        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
+        buff = struct.pack("H", end - start) + tuple(color.pack() for color in colors)
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
+
     def set_led_color(self, led: int, color: utils.RGBColor):
         if led > len(self.data.leds):
             raise IndexError("LED out of range")
