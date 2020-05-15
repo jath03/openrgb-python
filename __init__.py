@@ -3,7 +3,7 @@ import socket
 import struct
 import threading
 from openrgb import utils
-from typing import Callable
+from typing import Callable, List
 # from dataclasses import dataclass
 from time import sleep
 
@@ -133,7 +133,7 @@ class NetworkClient(object):
         # print(*colors, sep="\n\t")
         # print("---------------------------------")
         return utils.ControllerData(
-            *metadata,
+            utils.MetaData(*metadata),
             utils.DeviceType(device_type),
             leds,
             zones,
@@ -153,44 +153,79 @@ class NetworkClient(object):
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
 
 
-class RGBController(object):
+# class RGBController(object):
+#     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
+#         self.data = data
+#         self.id = device_id
+#         self.comms = network_client
+#
+#     def __repr__(self):
+#         return f"RGBController(name={self.data.name}, id={self.id})"
+#
+#     def set_color(self, color: utils.RGBColor, start=0, end=0):
+#         if end == 0:
+#             end = len(self.data.leds)
+#         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
+#         buff = struct.pack("H", end - start) + (color.pack())*(end - start)
+#         buff = struct.pack("I", len(buff)) + buff
+#         self.comms.sock.send(buff)
+#
+#     def set_colors(self, colors: List(utils.RGBColor), start=0, end=0):
+#         if end == 0:
+#             end = len(self.data.leds)
+#         if len(colors) != (end - start):
+#             raise IndexError("Number of colors doesn't match number of LEDs")
+#         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
+#         buff = struct.pack("H", end - start) + tuple(color.pack() for color in colors)
+#         buff = struct.pack("I", len(buff)) + buff
+#         self.comms.sock.send(buff)
+#
+#     def set_led_color(self, led: int, color: utils.RGBColor):
+#         if led > len(self.data.leds):
+#             raise IndexError("LED out of range")
+#         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize(f"iBBBx"))
+#         self.comms.sock.send(struct.pack("i", led) + color.pack())
+#
+#     def clear(self):
+#         self.set_color(utils.RGBColor(0, 0, 0))
+
+
+class Zone(utils.RGBObject):
+    def __init__(self, data: utils.ZoneData, device_id: int, network_client: NetworkClient):
+        self.name = data.name
+        self.type = data.zone_type
+
+
+class Device(utils.RGBObject):
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
-        self.data = data
+        self.name = data.name
+        self.metadata = data.metadata
+        self.type = data.device_type
+        self.leds = data.leds
+        self.zones = [Zone(zone, device_id, network_client) for zone in data.zones]
+        self.modes = data.modes
+        self.colors = data.colors
+        self.active_mode = data.active_mode
         self.id = device_id
         self.comms = network_client
 
-    def __str__(self):
-        return self.data.name
+    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
+        self.__set_color(
+            leds,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
+            color,
+            start,
+            end
+        )
 
-    def __repr__(self):
-        return f"RGBController(name={self.data.name}, id={self.id})"
-
-    def set_color(self, color: utils.RGBColor, start=0, end=0):
-        if end == 0:
-            end = len(self.data.leds)
-        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("H", end - start) + (color.pack())*(end - start)
-        buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
-
-    def set_colors(self, colors: List(utils.RGBColor), start=0, end=0):
-        if end == 0:
-            end = len(self.data.leds)
-        if len(colors) != (end - start):
-            raise IndexError("Number of colors doesn't match number of LEDs")
-        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("H", end - start) + tuple(color.pack() for color in colors)
-        buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
-
-    def set_led_color(self, led: int, color: utils.RGBColor):
-        if led > len(self.data.leds):
-            raise IndexError("LED out of range")
-        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize(f"iBBBx"))
-        self.comms.sock.send(struct.pack("i", led) + color.pack())
-
-    def clear(self):
-        self.set_color(utils.RGBColor(0, 0, 0))
+    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
+        self.__set_color(
+            leds,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
+            colors,
+            start,
+            end
+        )
 
 
 class OpenRGBClient(object):
@@ -209,7 +244,7 @@ class OpenRGBClient(object):
             self.device_num = data
         elif type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
             if self.devices[device] is None:
-                self.devices[device] = RGBController(data, device, self.comms)
+                self.devices[device] = Device(data, device, self.comms)
             else:
                 self.devices[device].data = data
 
