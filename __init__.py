@@ -3,13 +3,13 @@ import socket
 import struct
 import threading
 from openrgb import utils
-from typing import Callable, List
+from typing import Callable, List, Union
 # from dataclasses import dataclass
 from time import sleep
 
 
 class NetworkClient(object):
-    def __init__(self, update_callback: Callable, address="127.0.0.1", port=1337):
+    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         for x in range(5):
             try:
@@ -30,7 +30,7 @@ class NetworkClient(object):
         self.callback = update_callback
 
         # Sending the client name
-        name = b"python\0"
+        name = bytes(f"{name}\0", 'utf-8')
         self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
         self.sock.send(name, socket.MSG_NOSIGNAL)
 
@@ -121,6 +121,13 @@ class NetworkClient(object):
             color = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
             location += struct.calcsize("I")
             colors.append(utils.intToRGB((color)))
+        for zone in zones:
+            zone.leds = []
+            zone.colors = []
+            for x in range(len(leds)):
+                if zone.name in leds[x].name:
+                    zone.leds.append(leds[x])
+                    zone.colors.append(colors[x])
         # print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
         # print(*metadata, sep="\n\t")
         # print("Mode Information:\n", "\tNumber of modes:", num_modes, "\n\tActive Mode:", active_mode, "\n\t", end="")
@@ -133,7 +140,8 @@ class NetworkClient(object):
         # print(*colors, sep="\n\t")
         # print("---------------------------------")
         return utils.ControllerData(
-            utils.MetaData(*metadata),
+            metadata[0],
+            utils.MetaData(*metadata[1:]),
             utils.DeviceType(device_type),
             leds,
             zones,
@@ -162,7 +170,7 @@ class NetworkClient(object):
 #     def __repr__(self):
 #         return f"RGBController(name={self.data.name}, id={self.id})"
 #
-#     def set_color(self, color: utils.RGBColor, start=0, end=0):
+#     def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start=0, end=0):
 #         if end == 0:
 #             end = len(self.data.leds)
 #         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
@@ -170,7 +178,7 @@ class NetworkClient(object):
 #         buff = struct.pack("I", len(buff)) + buff
 #         self.comms.sock.send(buff)
 #
-#     def set_colors(self, colors: List(utils.RGBColor), start=0, end=0):
+#     def set_colors(self, colors: List(Union[utils.RGBColor, utils.HSVColor]), start=0, end=0):
 #         if end == 0:
 #             end = len(self.data.leds)
 #         if len(colors) != (end - start):
@@ -180,21 +188,39 @@ class NetworkClient(object):
 #         buff = struct.pack("I", len(buff)) + buff
 #         self.comms.sock.send(buff)
 #
-#     def set_led_color(self, led: int, color: utils.RGBColor):
+#     def set_led_color(self, led: int, color: Union[utils.RGBColor, utils.HSVColor]):
 #         if led > len(self.data.leds):
 #             raise IndexError("LED out of range")
 #         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize(f"iBBBx"))
 #         self.comms.sock.send(struct.pack("i", led) + color.pack())
 #
 #     def clear(self):
-#         self.set_color(utils.RGBColor(0, 0, 0))
+#         self.set_color(Union[utils.RGBColor, utils.HSVColor](0, 0, 0))
+
+class LED(utils.RGBObject):
+    pass
 
 
 class Zone(utils.RGBObject):
-    def __init__(self, data: utils.ZoneData, device_id: int, network_client: NetworkClient):
+    def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.type = data.zone_type
+        self.leds = data.leds
+        self.mat_width = data.mat_width
+        self.mat_height = data.mat_height
+        self.matrix_map = data.matrix_map
+        self.colors = data.colors
+        self.device_id = device_id
+        self.comms = network_client
+        self.id = zone_id
 
+    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start: int = 0, end: int = 0):
+        if end == 0:
+            end = len(self.leds)
+        self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
+        buff = struct.pack("IH", self.id, end - start) + (color.pack())*(end - start)
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
 
 class Device(utils.RGBObject):
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
@@ -202,25 +228,25 @@ class Device(utils.RGBObject):
         self.metadata = data.metadata
         self.type = data.device_type
         self.leds = data.leds
-        self.zones = [Zone(zone, device_id, network_client) for zone in data.zones]
+        self.zones = [Zone(data.zones[x], x, device_id, network_client) for x in range(len(data.zones))]
         self.modes = data.modes
         self.colors = data.colors
         self.active_mode = data.active_mode
         self.id = device_id
         self.comms = network_client
 
-    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
-        self.__set_color(
-            leds,
+    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start: int = 0, end: int = 0):
+        self._set_color(
+            self.leds,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
             color,
             start,
             end
         )
 
-    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
-        self.__set_color(
-            leds,
+    def set_colors(self, colors: List[Union[utils.RGBColor, utils.HSVColor]], start: int = 0, end: int = 0):
+        self._set_colors(
+            self.leds,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
             colors,
             start,
@@ -229,8 +255,11 @@ class Device(utils.RGBObject):
 
 
 class OpenRGBClient(object):
-    def __init__(self, address: str = "127.0.0.1", port: int = 1337):
-        self.comms = NetworkClient(self.callback, address, port)
+    def __init__(self, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
+        self.comms = NetworkClient(self.callback, address, port, name)
+        self.address = address
+        self.port = port
+        self.name = name
         self.device_num = 0
         while self.device_num == 0:
             sleep(.2)
@@ -238,6 +267,9 @@ class OpenRGBClient(object):
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
         sleep(1) # Giving the client time to recieve the device data
+
+    def __repr__(self):
+        return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
 
     def callback(self, device: int, type: int, data):
         if type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
@@ -248,12 +280,18 @@ class OpenRGBClient(object):
             else:
                 self.devices[device].data = data
 
-    def set_color(self, color: utils.RGBColor):
+    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor]):
         for device in self.devices:
             device.set_color(color)
 
     def clear(self):
-        self.set_color(utils.RGBColor(0, 0, 0))
+        self.set_color(Union[utils.RGBColor, utils.HSVColor](0, 0, 0))
+
+    def off(self):
+        self.clear()
+
+    def get_devices_by_type(self, type: utils.DeviceType) -> List[Device]:
+        return [device for device in self.devices if device.type == type]
 
 __all__ = ['utils']
 
@@ -261,4 +299,4 @@ if __name__ == "__main__":
     client = OpenRGBClient()
     for controller in client.devices:
         print(controller, "ID: " + str(controller.id), controller.data.device_type, sep='\n\t')
-    # client.devices[4].set_led_color(1, utils.RGBColor(0, 255, 0))
+    # client.devices[4].set_led_color(1, Union[utils.RGBColor, utils.HSVColor](0, 255, 0))

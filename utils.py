@@ -2,6 +2,7 @@ from enum import IntEnum, IntFlag
 from typing import List, TypeVar, Type
 from dataclasses import dataclass
 import struct
+import colorsys
 
 HEADER_SIZE = 16
 
@@ -80,6 +81,22 @@ class RGBColor(object):
         r, g, b = struct.unpack("BBBx", data)
         return RGBColor(r, g, b)
 
+    def toHSV(self) -> HSVColor:
+        hsv = colorsys.rgb_to_hsv(self.red/255, self.green/255, self.blue/255)
+        return HSVColor(round(hsv[0] * 360), round(hsv[1] * 100), round(hsv[2] * 100))
+
+@dataclass
+class HSVColor(object):
+    hue: int
+    saturation: int
+    value: int
+
+    def pack(self) -> bytearray:
+        return self.toRGB().pack()
+
+    def toRGB(self) - RGBColor:
+        return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(self.hue/360, self.saturation/100, self.value/100)))
+
 
 def intToRGB(color: int) -> RGBColor:
     return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
@@ -154,12 +171,12 @@ class RGBObject(object):
         self.id = device_id
 
     def __repr__(self):
-        return f"RGBController(name={self.name}, id={self.id})"
+        return f"{type(self).__name__}(name={self.name}, id={self.id})"
 
     def set_color(self, color: RGBColor, start: int = 0, end: int = 0):
         pass
 
-    def __set_color(self, children: list, type: PacketType, color: RGBColor, start: int = 0, end: int = 0):
+    def _set_color(self, children: list, type: PacketType, color: RGBColor, start: int = 0, end: int = 0):
         if end == 0:
             end = len(children)
         self.comms.send_header(self.id, type, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
@@ -170,15 +187,18 @@ class RGBObject(object):
     def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0):
         pass
 
-    def __set_colors(self, children: list, type: PacketType, colors: List[RGBColor], start: int = 0, end: int = 0):
+    def _set_colors(self, children: list, type: PacketType, colors: List[RGBColor], start: int = 0, end: int = 0):
         if end == 0:
             end = len(children)
         if len(colors) != (end - start):
             raise IndexError("Number of colors doesn't match number of LEDs")
-        self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
+        self.comms.send_header(self.id, type, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
         buff = struct.pack("H", end - start) + tuple(color.pack() for color in colors)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
 
     def clear(self):
         self.set_color(RGBColor(0, 0, 0))
+
+    def off(self):
+        self.clear()
