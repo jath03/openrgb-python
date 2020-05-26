@@ -3,12 +3,15 @@ import socket
 import struct
 import threading
 from openrgb import utils
-from typing import Callable, List, Union
+from typing import Callable, List, Union, Tuple
 # from dataclasses import dataclass
 from time import sleep
 
 
 class NetworkClient(object):
+    '''
+    A class for interfacing with the OpenRGB SDK
+    '''
     def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         for x in range(5):
@@ -38,6 +41,11 @@ class NetworkClient(object):
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
 
     def listen(self):
+        '''
+        Listens for responses from the SDK from a separate thread
+
+        :raises BrokenPipeError: raises an error when it loses connection to the SDK
+        '''
         try:
             while True:
                 header = bytearray(utils.HEADER_SIZE)
@@ -61,9 +69,20 @@ class NetworkClient(object):
             raise Exception("Disconnected.  Did you disable the SDK?")
 
     def requestDeviceData(self, device: int):
+        '''
+        Sends the request for a device's data
+
+        :param device: the id of the device to request data for
+        '''
         self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
 
     def parseDeviceDescription(self, data: bytearray) -> utils.ControllerData:
+        '''
+        Parses the raw bytes received from the SDK into a ControllerData dataclass
+
+        :param data: the raw bytes that follow a header with the type NET_PACKET_ID_REQUEST_CONTROLLER_DATA
+        :returns: a ControllerData dataclass ready to pass into the OpenRGBClient's calback function
+        '''
         buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
         location = struct.calcsize("Ii")
         device_type = buff[1]
@@ -150,7 +169,14 @@ class NetworkClient(object):
             active_mode
         )
 
-    def parseSizeAndString(self, data, start=0):
+    def parseSizeAndString(self, data: bytes, start: int = 0) -> Tuple[int, str]:
+        '''
+        Parses a string based on a size.
+
+        :param data: the raw data to parse
+        :param start: the location in the data to start parsing at
+        :returns: the location in the data of the end of the string and the string itself
+        '''
         size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
         start += struct.calcsize("H")
         val = struct.unpack(f"{size}s", data[start:start + size])[0].decode()
@@ -158,10 +184,20 @@ class NetworkClient(object):
         return start, val.strip("\x00")
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
+        '''
+        Sends a header to the SDK
+
+        :param device_id: the id of the device to send a header for
+        :param packet_type: a utils.PacketType
+        :param packet_size: the full size of the data to be send after the header
+        '''
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
 
 
 class LED(utils.RGBObject):
+    '''
+    A class to represent individual LEDs
+    '''
     def __init__(self, data: utils.LEDData, led_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.id = led_id
@@ -169,12 +205,20 @@ class LED(utils.RGBObject):
         self.comms = network_client
 
     def set_color(self, color: utils.RGBColor):
+        '''
+        Sets the color of the LED
+
+        :param color: the color to set the LED to
+        '''
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize("i3bx"))
         buff = struct.pack("i", self.id) + color.pack()
         self.comms.sock.send(buff)
 
 
 class Zone(utils.RGBObject):
+    '''
+    A class to represent a zone
+    '''
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.type = data.zone_type
@@ -188,6 +232,13 @@ class Zone(utils.RGBObject):
         self.id = zone_id
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
+        '''
+        Sets the color leds in the zone between start and end
+
+        :param color: the color to set the leds to
+        :param start: the first LED to change
+        :param end: the last LED to change
+        '''
         if end == 0:
             end = len(self.leds)
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
