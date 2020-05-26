@@ -8,7 +8,7 @@ SDK Feature Support:
   - [x] Getting device info
   - [x] Setting color by device
   - [x] Setting color by zone
-  - [ ] Setting color by led
+  - [x] Setting color by led
   - [ ] Setting mode
   - [ ] Setting custom modes
   - [ ] resizing zones
