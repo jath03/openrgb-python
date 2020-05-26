@@ -13,6 +13,14 @@ SDK Feature Support:
   - [ ] Setting custom modes
   - [ ] resizing zones
 
+# Installation
+
+requires python >= 3.7
+
+**TODO**
+
+# Usage
+
 ```python
 from openrgb import OpenRGBClient
 from openrgb.utils import RGBColor, DeviceType

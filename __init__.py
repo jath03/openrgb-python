@@ -205,6 +205,7 @@ class Zone(utils.RGBObject):
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
 
+
 class Device(utils.RGBObject):
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
         self.name = data.name
