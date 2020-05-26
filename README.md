@@ -24,8 +24,8 @@ client.clear() # Turns everything off
 motherboard = client.get_devices_by_type(DeviceType.DEVICE_TYPE_MOTHERBOARD)[0]
 
 motherboard.set_color(RGBColor(0, 255, 0))
-motherboard.zone[0].set_color(RGBColor(255, 0, 0))
-motherboard.zone[1].set_color(RGBColor.fromHSV(0, 100, 100))
+motherboard.zones[0].set_color(RGBColor(255, 0, 0))
+motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
 ```
 
 For a more fully-featured python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
