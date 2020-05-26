@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from ..openrgb import OpenRGBClient
-from ..openrgb.utils import RGBColor, DeviceType
+from openrgb import OpenRGBClient
+from openrgb.utils import RGBColor, DeviceType
 import sensors
 from time import sleep
 from pynvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU
