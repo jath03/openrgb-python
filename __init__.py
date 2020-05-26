@@ -170,7 +170,7 @@ class NetworkClient(object):
 #     def __repr__(self):
 #         return f"RGBController(name={self.data.name}, id={self.id})"
 #
-#     def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start=0, end=0):
+#     def set_color(self, color: utils.RGBColor, start=0, end=0):
 #         if end == 0:
 #             end = len(self.data.leds)
 #         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
@@ -178,7 +178,7 @@ class NetworkClient(object):
 #         buff = struct.pack("I", len(buff)) + buff
 #         self.comms.sock.send(buff)
 #
-#     def set_colors(self, colors: List(Union[utils.RGBColor, utils.HSVColor]), start=0, end=0):
+#     def set_colors(self, colors: List(utils.RGBColor), start=0, end=0):
 #         if end == 0:
 #             end = len(self.data.leds)
 #         if len(colors) != (end - start):
@@ -188,14 +188,14 @@ class NetworkClient(object):
 #         buff = struct.pack("I", len(buff)) + buff
 #         self.comms.sock.send(buff)
 #
-#     def set_led_color(self, led: int, color: Union[utils.RGBColor, utils.HSVColor]):
+#     def set_led_color(self, led: int, color: utils.RGBColor):
 #         if led > len(self.data.leds):
 #             raise IndexError("LED out of range")
 #         self.comms.send_header(self.id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize(f"iBBBx"))
 #         self.comms.sock.send(struct.pack("i", led) + color.pack())
 #
 #     def clear(self):
-#         self.set_color(Union[utils.RGBColor, utils.HSVColor](0, 0, 0))
+#         self.set_color(utils.RGBColor(0, 0, 0))
 
 class LED(utils.RGBObject):
     pass
@@ -214,7 +214,7 @@ class Zone(utils.RGBObject):
         self.comms = network_client
         self.id = zone_id
 
-    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start: int = 0, end: int = 0):
+    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
         if end == 0:
             end = len(self.leds)
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
@@ -235,7 +235,7 @@ class Device(utils.RGBObject):
         self.id = device_id
         self.comms = network_client
 
-    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor], start: int = 0, end: int = 0):
+    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
         self._set_color(
             self.leds,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
@@ -244,7 +244,7 @@ class Device(utils.RGBObject):
             end
         )
 
-    def set_colors(self, colors: List[Union[utils.RGBColor, utils.HSVColor]], start: int = 0, end: int = 0):
+    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
         self._set_colors(
             self.leds,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
@@ -280,12 +280,12 @@ class OpenRGBClient(object):
             else:
                 self.devices[device].data = data
 
-    def set_color(self, color: Union[utils.RGBColor, utils.HSVColor]):
+    def set_color(self, color: utils.RGBColor):
         for device in self.devices:
             device.set_color(color)
 
     def clear(self):
-        self.set_color(Union[utils.RGBColor, utils.HSVColor](0, 0, 0))
+        self.set_color(utils.RGBColor(0, 0, 0))
 
     def off(self):
         self.clear()
@@ -299,4 +299,4 @@ if __name__ == "__main__":
     client = OpenRGBClient()
     for controller in client.devices:
         print(controller, "ID: " + str(controller.id), controller.data.device_type, sep='\n\t')
-    # client.devices[4].set_led_color(1, Union[utils.RGBColor, utils.HSVColor](0, 255, 0))
+    # client.devices[4].set_led_color(1, utils.RGBColor(0, 255, 0))

@@ -81,22 +81,9 @@ class RGBColor(object):
         r, g, b = struct.unpack("BBBx", data)
         return RGBColor(r, g, b)
 
-    def toHSV(self) -> HSVColor:
-        hsv = colorsys.rgb_to_hsv(self.red/255, self.green/255, self.blue/255)
-        return HSVColor(round(hsv[0] * 360), round(hsv[1] * 100), round(hsv[2] * 100))
-
-@dataclass
-class HSVColor(object):
-    hue: int
-    saturation: int
-    value: int
-
-    def pack(self) -> bytearray:
-        return self.toRGB().pack()
-
-    def toRGB(self) - RGBColor:
-        return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(self.hue/360, self.saturation/100, self.value/100)))
-
+    @classmethod
+    def fromHSV(cls: Type[CT], hue: int, saturation: int, value: int) -> CT:
+        return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
 
 def intToRGB(color: int) -> RGBColor:
     return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
