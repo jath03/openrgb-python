@@ -42,8 +42,7 @@ try:
         feature = [i for i in chip if i.name == "temp1"][0]
         temp = feature.get_value()
         red, blue = temp_to_color(temp)
-        cooler.set_led_color(1, RGBColor(red, 0, blue))
-        cooler.set_led_color(2, RGBColor(red, 0, blue))
+        cooler.set_color(RGBColor(red, 0, blue))
 
         ### GPU Temp
         temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
