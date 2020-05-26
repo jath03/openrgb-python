@@ -180,7 +180,7 @@ class RGBObject(object):
         if len(colors) != (end - start):
             raise IndexError("Number of colors doesn't match number of LEDs")
         self.comms.send_header(self.id, type, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("H", end - start) + tuple(color.pack() for color in colors)
+        buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
 

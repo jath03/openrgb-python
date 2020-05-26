@@ -195,6 +195,16 @@ class Zone(utils.RGBObject):
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
 
+    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
+        if end == 0:
+            end = len(self.leds)
+        if len(colors) != (end - start):
+            raise IndexError("Number of colors doesn't match number of LEDs")
+        self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
+        buff = struct.pack("IH", self.id, end - start) + b''.join((color.pack() for color in colors))
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
+
 class Device(utils.RGBObject):
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
         self.name = data.name
