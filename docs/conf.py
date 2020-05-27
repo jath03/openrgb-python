@@ -14,7 +14,7 @@ import os
 import sys
 
 print(os.path.abspath("."))
-prin(os.path.exists("openrgb"))
+print(os.path.exists("openrgb"))
 sys.path.insert(0, os.path.abspath('.'))
 
 
