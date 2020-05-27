@@ -10,5 +10,5 @@ python:
     install:
         - requirements: docs/requirements.txt
         - method: setuptools
-          path: ../openrgb
+          path: .
     system_packages: true
