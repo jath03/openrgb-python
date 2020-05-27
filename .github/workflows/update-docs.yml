@@ -22,13 +22,12 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install sphinx-autodoc-typehints
+
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"
+        pre-build-command: "python -m pip install --upgrade pip && pip install sphinx-autodoc-typehints"
+
 
     - name: Commit documentation changes
       run: |
