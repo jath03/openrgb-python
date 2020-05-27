@@ -25,8 +25,8 @@ jobs:
         git clone https://github.com/jath03/openrgb-python.git --branch gh-pages --single-branch gh-pages
         cp -r docs/_build/html/* gh-pages/
         cd gh-pages
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --local user.email "jackthughes@yahoo.com"
+        git config --local user.name "jath03"
         git add .
         git commit -m "Update documentation" -a || true
         # The above command will fail if no changes were present, so we ignore
@@ -36,4 +36,4 @@ jobs:
       with:
         branch: gh-pages
         directory: gh-pages
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.MY_TOKEN }}
