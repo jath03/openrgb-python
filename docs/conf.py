@@ -13,9 +13,13 @@
 import os
 import sys
 
-print(os.path.abspath("."))
-print(os.path.exists("openrgb"))
-sys.path.insert(0, os.path.abspath('.'))
+print(os.path.abspath('../../..'))
+
+if os.environ.get("READTHEDOCS"):
+    sys.path.insert(0, os.path.abspath('../../..'))
+else:
+    sys.path.insert(0, '/home/jack/projects/openrgb-python')
+    
 
 
 # -- Project information -----------------------------------------------------
