@@ -1,13 +1,11 @@
 version: 2
 
-formats:
-    all
+formats: all
 
 python:
    version: 3.7
    install:
       - requirements: docs/requirements.txt
-    system_packages: true
 
 sphinx:
     builder: html
