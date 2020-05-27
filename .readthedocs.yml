@@ -5,9 +5,9 @@ python:
     install:
         - requirements: docs/requirements.txt
         - method: setuptools
-        path: .
+          path: .
         system_packages: true
-        
+
 sphinx:
     builder: html
     configuration: docs/conf.py
