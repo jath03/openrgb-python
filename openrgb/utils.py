@@ -74,6 +74,11 @@ class RGBColor(object):
     blue: int
 
     def pack(self) -> bytearray:
+        '''
+        packs itself into bytes, ready to be sent to the SDK
+
+        :returns: data ready to be sent
+        '''
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
@@ -84,15 +89,6 @@ class RGBColor(object):
     @classmethod
     def fromHSV(cls: Type[CT], hue: int, saturation: int, value: int) -> CT:
         return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
-
-def intToRGB(color: int) -> RGBColor:
-    return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
-
-
-def RGBtoInt(color: RGBColor) -> int:
-    return ((color.blue << 16) | (color.green << 8) | (color.red))
-
-# print((int.from_bytes(RGBColor(100, 200, 10).pack(), "big") >> 16) & 0x000000FF)
 
 
 @dataclass

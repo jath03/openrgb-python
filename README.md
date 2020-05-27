@@ -17,7 +17,13 @@ SDK Feature Support:
 
 requires python >= 3.7
 
-**TODO**
+Use this method for the newest, but probably buggy, package:
+
+`pip3 install git+https://github.com/jath03/openrgb-python#egg=openrgb-python`
+
+For a more stable package:
+
+`pip3 install openrgb-python`
 
 # Usage
 
@@ -35,5 +41,9 @@ motherboard.set_color(RGBColor(0, 255, 0))
 motherboard.zones[0].set_color(RGBColor(255, 0, 0))
 motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
 ```
+
+# API docs
+
+
 
 For a more fully-featured python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
