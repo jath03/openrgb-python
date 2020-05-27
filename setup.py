@@ -4,10 +4,11 @@ import os
 with open("README.md", "r") as f:
     long_description = f.read()
 
+print(os.environ.get('OPENRGB_PACKAGE_VERSION'))
 
 setuptools.setup(
     name="openrgb-python",
-    version=os.environ['OPENRGB_PACKAGE_VERSION'].strip("\'\""),
+    version='0.0.1,'#os.environ['OPENRGB_PACKAGE_VERSION'].strip("v\'\""),
     author="jath03",
     description="A python client for the OpenRGB SDK",
     long_description=long_description,
