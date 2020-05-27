@@ -27,7 +27,6 @@ jobs:
     - name: Build
       env:
           OPENRGB_PACKAGE_VERSION: $GITHUB_REF
-      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
       run: python setup.py sdist bdist_wheel
 
     - name: Publish package
