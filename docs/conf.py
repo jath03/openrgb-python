@@ -16,7 +16,6 @@ import sys
 print(os.path.abspath('../../..'))
 
 if os.environ.get("READTHEDOCS"):
-    print("In READTHEDOCS")
     sys.path.insert(0, os.path.realpath('..'))
 else:
     sys.path.insert(0, '/home/jack/projects/openrgb-python')
