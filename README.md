@@ -44,7 +44,7 @@ motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
 
 # API docs
 
-https://openrgb-python.readthedocs.io/en/latest/
+https://openrgb-python.readthedocs.io/en/stable/
 
 
 For a more fully-featured python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
