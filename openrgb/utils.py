@@ -91,6 +91,10 @@ class RGBColor(object):
         return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
 
 
+def intToRGB(color: int) -> RGBColor:
+    return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
+
+
 @dataclass
 class LEDData(object):
     name: str

@@ -102,8 +102,8 @@ class NetworkClient(object):
             buff[5] = utils.intToRGB(buff[5])
             colors = []
             for x in range(buff[-1]):
-                colors.append(utils.intToRGB(struct.unpack("I", data[location:location + struct.calcsize("I")])[0]))
-                location += struct.calcsize('I')
+                colors.append(utils.RGBColor.unpack(data[location:location + struct.calcsize("I")]))
+                location += struct.calcsize('BBBx')
             modes.append(utils.ModeData(val.strip('\x00'), buff[0], utils.ModeFlags(buff[1]), *buff[2:7], utils.ModeDirections(buff[8]), utils.ModeColors(buff[9]), colors))
         num_zones = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
         location += struct.calcsize("H")
@@ -136,9 +136,8 @@ class NetworkClient(object):
         location += struct.calcsize("H")
         colors = []
         for x in range(num_colors):
-            color = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
-            location += struct.calcsize("I")
-            colors.append(utils.intToRGB((color)))
+            colors.append(utils.RGBColor.unpack(data[location:location + struct.calcsize("BBBx")]))
+            location += struct.calcsize("BBBx")
         for zone in zones:
             zone.leds = []
             zone.colors = []
