@@ -19,7 +19,7 @@ if os.environ.get("READTHEDOCS"):
     sys.path.insert(0, os.path.realpath('..'))
 else:
     sys.path.insert(0, '/home/jack/projects/openrgb-python')
-    
+
 
 
 # -- Project information -----------------------------------------------------
@@ -38,8 +38,16 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
-    'sphinx_autodoc_typehints'
+    'sphinx_autodoc_typehints',
+    'recommonmark'
 ]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.txt': 'markdown',
+    '.md': 'markdown',
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
