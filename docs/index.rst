@@ -10,8 +10,8 @@ Welcome to openrgb's documentation!
    :maxdepth: 4
    :caption: Contents:
 
-   intro
-   openrgb
+   Introduction <intro>
+   API <openrgb>
 
 
 Indices and tables
