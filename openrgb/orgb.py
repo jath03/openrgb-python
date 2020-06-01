@@ -124,7 +124,7 @@ class Device(utils.RGBObject):
             start,
             end
         )
-    def set_mode(self, )
+    # def set_mode(self, )
 
 
 class OpenRGBClient(object):
