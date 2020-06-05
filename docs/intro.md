@@ -4,7 +4,7 @@
 
 A python client for the [OpenRGB SDK](https://gitlab.com/CalcProgrammer1/OpenRGB)
 
-I started this project because I wanted to be able to control the color of my lights based on temps.  Because of this goal, the full functionality of the OpenRGB SDK isn't implemented, but I tried to implement the supported features in the best (easiest to use) way possible.  
+I started this project because I wanted to be able to control the color of my lights based on temps. I tried to implement the features in the best (easiest to use) way possible.  
 
 SDK Feature Support:
   - [x] Setting client name
@@ -43,6 +43,7 @@ motherboard = client.get_devices_by_type(DeviceType.DEVICE_TYPE_MOTHERBOARD)[0]
 motherboard.set_color(RGBColor(0, 255, 0))
 motherboard.zones[0].set_color(RGBColor(255, 0, 0))
 motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
+motherboard.set_mode("breathing")
 ```
 
 
