@@ -1,5 +1,5 @@
 from enum import IntEnum, IntFlag
-from typing import List, TypeVar, Type
+from typing import List, TypeVar, Type, Tuple
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -64,7 +64,23 @@ class PacketType(IntEnum):
     NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE = 1100
     NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
 
+
 CT = TypeVar("CT", bound="RGBColor")
+
+
+def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
+    '''
+    Parses a string based on a size.
+
+    :param data: the raw data to parse
+    :param start: the location in the data to start parsing at
+    :returns: the location in the data of the end of the string and the string itself
+    '''
+    size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
+    start += struct.calcsize("H")
+    val = struct.unpack(f"{size}s", data[start:start + size])[0].decode()
+    start += size
+    return start, val.strip("\x00")
 
 
 @dataclass
@@ -82,9 +98,14 @@ class RGBColor(object):
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls: Type[CT], data: bytearray) -> CT:
-        r, g, b = struct.unpack("BBBx", data)
-        return RGBColor(r, g, b)
+    def unpack(cls: Type[CT], data: bytearray, start: int = 0) -> Tuple[int, CT]:
+        size = struct.calcsize("BBBx")
+        if start == 0:
+            r, g, b = struct.unpack("BBBx", data[:size])
+            return size, RGBColor(r, g, b)
+        else:
+            r, g, b = struct.unpack("BBBx", data[start:start + size])
+            return (start + size), RGBColor(r, g, b)
 
     @classmethod
     def fromHSV(cls: Type[CT], hue: int, saturation: int, value: int) -> CT:
@@ -103,6 +124,7 @@ class LEDData(object):
 
 @dataclass
 class ModeData(object):
+    id: int
     name: str
     value: int
     flags: ModeFlags
@@ -114,6 +136,39 @@ class ModeData(object):
     direction: ModeDirections
     color_mode: ModeColors
     colors: List[RGBColor]
+
+    def pack(self) -> Tuple[int, bytearray]:
+        '''
+        Packs itself into bytes ready to be sent to the SDK
+
+        :returns: data ready to be sent and its size
+        '''
+        # IDK why size = struct.calcsize(f"IiH{len(self.name)}si8IH{len(self.colors)}I")
+        #  doesn't work without the if, but when self.colors is empty it still adds 2 bytes on for it
+        if len(self.colors) == 0:
+            size = struct.calcsize(f"IiH{len(self.name)}si8IH")
+        else:
+            size = struct.calcsize(f"IiH{len(self.name)}si8IH{len(self.colors)}I")
+        data = struct.pack(
+            f"IiH{len(self.name)}si8IH",
+            size,
+            self.id,
+            len(self.name),
+            self.name.encode('utf-8'),
+            self.value,
+            self.flags,
+            self.speed_min,
+            self.speed_max,
+            self.colors_min,
+            self.colors_max,
+            self.speed,
+            self.direction,
+            self.color_mode,
+            len(self.colors)
+        )
+        data += bytearray((color.pack() for color in self.colors))
+
+        return size, data
 
 
 @dataclass
@@ -152,6 +207,11 @@ class ControllerData(object):
 
 
 class RGBObject(object):
+    '''
+    A parent object that includes a few generic functions that use the
+    implementation provided by the children.
+    '''
+
     def __init__(self, comms, name: str, device_id: int):
         self.comms = comms
         self.name = name
@@ -163,26 +223,8 @@ class RGBObject(object):
     def set_color(self, color: RGBColor, start: int = 0, end: int = 0):
         pass
 
-    def _set_color(self, children: list, type: PacketType, color: RGBColor, start: int = 0, end: int = 0):
-        if end == 0:
-            end = len(children)
-        self.comms.send_header(self.id, type, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("H", end - start) + (color.pack())*(end - start)
-        buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
-
     def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0):
         pass
-
-    def _set_colors(self, children: list, type: PacketType, colors: List[RGBColor], start: int = 0, end: int = 0):
-        if end == 0:
-            end = len(children)
-        if len(colors) != (end - start):
-            raise IndexError("Number of colors doesn't match number of LEDs")
-        self.comms.send_header(self.id, type, struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
-        buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
 
     def clear(self):
         self.set_color(RGBColor(0, 0, 0))

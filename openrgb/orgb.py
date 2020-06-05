@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import struct
 from openrgb import utils
-from typing import Callable, List, Union, Tuple
+from typing import List, Union
 from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
@@ -11,6 +11,7 @@ class LED(utils.RGBObject):
     '''
     A class to represent individual LEDs
     '''
+
     def __init__(self, data: utils.LEDData, led_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.id = led_id
@@ -32,6 +33,7 @@ class Zone(utils.RGBObject):
     '''
     A class to represent a zone
     '''
+
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.type = data.zone_type
@@ -81,6 +83,7 @@ class Device(utils.RGBObject):
     '''
     A class to represent a RGB Device
     '''
+
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.metadata = data.metadata
@@ -101,13 +104,16 @@ class Device(utils.RGBObject):
         :param start: the first LED to change
         :param end: the last LED to change
         '''
-        self._set_color(
-            self.leds,
+        if end == 0:
+            end = len(self.leds)
+        self.comms.send_header(
+            self.id,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
-            color,
-            start,
-            end
+            struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x")
         )
+        buff = struct.pack("H", end - start) + (color.pack())*(end - start)
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
 
     def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
         '''
@@ -117,20 +123,55 @@ class Device(utils.RGBObject):
         :param start: the first LED to change
         :param end: the last LED to change
         '''
-        self._set_colors(
-            self.leds,
+        if end == 0:
+            end = len(self.leds)
+        if len(colors) != (end - start):
+            raise IndexError("Number of colors doesn't match number of LEDs")
+        self.comms.send_header(
+            self.id,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
-            colors,
-            start,
-            end
+            struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x")
         )
-    # def set_mode(self, )
+        buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
+        buff = struct.pack("I", len(buff)) + buff
+        self.comms.sock.send(buff)
+
+    def set_mode(self, mode: Union[int, str, utils.ModeData]):
+        '''
+        Sets the device's mode
+
+        :param mode: the id, name, or the ModeData object itself to set as the mode
+        '''
+        if type(mode) == utils.ModeData:
+            pass
+        elif type(mode) == int:
+            mode = self.modes[mode]
+        elif type(mode) == str:
+            mode = next((m for m in self.modes if m.name.lower() == mode.lower()))
+        # print(mode)
+        size, data = mode.pack()
+        self.comms.send_header(
+            self.id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE,
+            size
+        )
+        self.comms.sock.send(data)
+
+    def set_custom_mode(self):
+        self.comms.send_header(
+            self.id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE,
+            0
+        )
 
 
 class OpenRGBClient(object):
     '''
-    This is the only class you should ever need to instantiate.  It initializes the communication, gets the device information, and creates Devices, Zones, and LEDs for you.
+    This is the only class you should ever need to instantiate.  It initializes
+    the communication, gets the device information, sets the devices to the
+    custom mode and creates Devices, Zones, and LEDs for you.
     '''
+
     def __init__(self, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
         self.comms = NetworkClient(self._callback, address, port, name)
         self.address = address
@@ -142,7 +183,9 @@ class OpenRGBClient(object):
         self.devices = [None for x in range(self.device_num)]
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
-        sleep(1) # Giving the client time to recieve the device data
+        sleep(1)  # Giving the client time to recieve the device data
+        for dev in self.devices:
+            dev.set_custom_mode()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"

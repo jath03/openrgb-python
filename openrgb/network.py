@@ -3,7 +3,7 @@ import socket
 import struct
 import threading
 from openrgb import utils
-from typing import Callable, List, Union, Tuple
+from typing import Callable
 from time import sleep
 
 
@@ -11,6 +11,7 @@ class NetworkClient(object):
     '''
     A class for interfacing with the OpenRGB SDK
     '''
+
     def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         for x in range(5):
@@ -87,7 +88,7 @@ class NetworkClient(object):
         device_type = buff[1]
         metadata = []
         for x in range(5):
-            location, val = self.parseSizeAndString(data, location)
+            location, val = utils.parse_string(data, location)
             metadata.append(val)
         buff = struct.unpack("=Hi", data[location:location + struct.calcsize("=Hi")])
         location += struct.calcsize("=Hi")
@@ -95,21 +96,19 @@ class NetworkClient(object):
         active_mode = buff[-1]
         modes = []
         for x in range(num_modes):
-            location, val = self.parseSizeAndString(data, location)
+            location, val = utils.parse_string(data, location)
             buff = list(struct.unpack("i8IH", data[location:location + struct.calcsize("i8IH")]))
             location += struct.calcsize("i8IH")
-            buff[4] = utils.intToRGB(buff[4])
-            buff[5] = utils.intToRGB(buff[5])
             colors = []
-            for x in range(buff[-1]):
-                colors.append(utils.RGBColor.unpack(data[location:location + struct.calcsize("I")]))
-                location += struct.calcsize('BBBx')
-            modes.append(utils.ModeData(val.strip('\x00'), buff[0], utils.ModeFlags(buff[1]), *buff[2:7], utils.ModeDirections(buff[8]), utils.ModeColors(buff[9]), colors))
+            for i in range(buff[-1]):
+                location, color = utils.RGBColor.unpack(data, location)
+                colors.append(color)
+            modes.append(utils.ModeData(x, val.strip('\x00'), buff[0], utils.ModeFlags(buff[1]), *buff[2:7], utils.ModeDirections(buff[8]), utils.ModeColors(buff[9]), colors))
         num_zones = struct.unpack("H", data[location:location + struct.calcsize("H")])[0]
         location += struct.calcsize("H")
         zones = []
         for x in range(num_zones):
-            location, val = self.parseSizeAndString(data, location)
+            location, val = utils.parse_string(data, location)
             buff = list(struct.unpack("iIIIH", data[location:location + struct.calcsize("iIIIH")]))
             location += struct.calcsize("iIIIH")
 
@@ -128,7 +127,7 @@ class NetworkClient(object):
         location += struct.calcsize("H")
         leds = []
         for x in range(num_leds):
-            location, name = self.parseSizeAndString(data, location)
+            location, name = utils.parse_string(data, location)
             value = struct.unpack("I", data[location:location + struct.calcsize("I")])[0]
             location += struct.calcsize("I")
             leds.append(utils.LEDData(name.strip("\x00"), value))
@@ -136,8 +135,8 @@ class NetworkClient(object):
         location += struct.calcsize("H")
         colors = []
         for x in range(num_colors):
-            colors.append(utils.RGBColor.unpack(data[location:location + struct.calcsize("BBBx")]))
-            location += struct.calcsize("BBBx")
+            location, color = utils.RGBColor.unpack(data, location)
+            colors.append(color)
         for zone in zones:
             zone.leds = []
             zone.colors = []
@@ -166,20 +165,6 @@ class NetworkClient(object):
             colors,
             active_mode
         )
-
-    def parseSizeAndString(self, data: bytes, start: int = 0) -> Tuple[int, str]:
-        '''
-        Parses a string based on a size.
-
-        :param data: the raw data to parse
-        :param start: the location in the data to start parsing at
-        :returns: the location in the data of the end of the string and the string itself
-        '''
-        size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
-        start += struct.calcsize("H")
-        val = struct.unpack(f"{size}s", data[start:start + size])[0].decode()
-        start += size
-        return start, val.strip("\x00")
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
         '''

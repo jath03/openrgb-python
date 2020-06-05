@@ -12,15 +12,15 @@ SDK Feature Support:
   - [x] Setting color by device
   - [x] Setting color by zone
   - [x] Setting color by led
-  - [ ] Setting mode
-  - [ ] Setting custom modes
+  - [x] Setting mode
+  - [x] Setting custom mode
   - [ ] resizing zones
 
 # Installation
 
 requires python >= 3.7
 
-Use this method for the newest, but probably buggy, package:
+Use this method for the newest, but possibly buggy, package:
 
 `pip3 install git+https://github.com/jath03/openrgb-python#egg=openrgb-python`
 
@@ -46,4 +46,4 @@ motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
 ```
 
 
-For a more fully-featured python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
+For an alternative python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
