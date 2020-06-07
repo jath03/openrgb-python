@@ -165,14 +165,20 @@ class Device(utils.RGBObject):
         )
 
 
-class OpenRGBClient(object):
+class OpenRGBClient(utils.RGBObject):
     '''
     This is the only class you should ever need to instantiate.  It initializes
     the communication, gets the device information, sets the devices to the
     custom mode and creates Devices, Zones, and LEDs for you.
     '''
 
-    def __init__(self, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
+    def __init__(self, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python", custom: bool = True):
+        '''
+        :param address: the ip address of the SDK server
+        :param port: the port of the SDK server
+        :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
+        :param custom: whether or not to set all your devices to custom control mode on initializtion
+        '''
         self.comms = NetworkClient(self._callback, address, port, name)
         self.address = address
         self.port = port
@@ -183,9 +189,11 @@ class OpenRGBClient(object):
         self.devices = [None for x in range(self.device_num)]
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
-        sleep(1)  # Giving the client time to recieve the device data
-        for dev in self.devices:
-            dev.set_custom_mode()
+        while any((dev is None for dev in self.devices)):
+            sleep(.2)
+        if custom:
+            for dev in self.devices:
+                dev.set_custom_mode()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
@@ -207,18 +215,6 @@ class OpenRGBClient(object):
         '''
         for device in self.devices:
             device.set_color(color)
-
-    def clear(self):
-        '''
-        Turns all of the LEDs off
-        '''
-        self.set_color(utils.RGBColor(0, 0, 0))
-
-    def off(self):
-        '''
-        See OpenRGBClient.clear
-        '''
-        self.clear()
 
     def get_devices_by_type(self, type: utils.DeviceType) -> List[Device]:
         '''

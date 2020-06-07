@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from openrgb import OpenRGBClient
-from openrgb.utils import RGBColor, DeviceType
-from time import sleep
+from openrgb.utils import RGBColor
 
 client = OpenRGBClient()
 
@@ -11,5 +10,4 @@ print(client.devices)
 
 client.off()
 
-for device in client.devices:
-    device.set_color(RGBColor(255, 0, 0))
+client.set_color(RGBColor(0, 0, 255))

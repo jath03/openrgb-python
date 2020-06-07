@@ -8,6 +8,7 @@ Module contents
    :members:
    :undoc-members:
    :show-inheritance:
+   :inherited-members:
 
 Submodules
 ----------
@@ -35,4 +36,3 @@ openrgb.utils module
    :members:
    :undoc-members:
    :show-inheritance:
-

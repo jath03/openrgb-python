@@ -1,5 +1,5 @@
 from enum import IntEnum, IntFlag
-from typing import List, TypeVar, Type, Tuple
+from typing import List, TypeVar, Tuple
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -65,7 +65,12 @@ class PacketType(IntEnum):
     NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
 
 
-CT = TypeVar("CT", bound="RGBColor")
+CT = TypeVar("CT", bound="RGBColor") # rgbColor Type
+MDT = TypeVar("MDT", bound="ModeData") # ModeData Type
+ZDT = TypeVar("ZDT", bound="ZoneData") # ZoneData Type
+LDT = TypeVar("LDT", bound="LEDData") # LedData Type
+MEDT = TypeVar("MEDT", bound="MetaData") # MEtaData Type
+CDT = TypeVar("CDT", bound="ControllerData") # ControllerData Type
 
 
 def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
@@ -83,6 +88,23 @@ def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
     return start, val.strip("\x00")
 
 
+def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List]:
+    '''
+    Parses a list of objects and returns them
+
+    :param kind: the class that the list consists of
+    :param data: the raw data to parse
+    :param start: the location in the data to start parsing
+    '''
+    num = struct.unpack("H", data[start:start + struct.calcsize("H")])[0]
+    start += struct.calcsize("H")
+    things = []
+    for x in range(num):
+        start, thing = kind.unpack(data, start, x)
+        things.append(thing)
+    return start, things
+
+
 @dataclass
 class RGBColor(object):
     red: int
@@ -98,28 +120,45 @@ class RGBColor(object):
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls: Type[CT], data: bytearray, start: int = 0) -> Tuple[int, CT]:
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, CT]:
+        '''
+        Unpacks an RGBColor object from bytes
+
+        :returns: an RGBColor object
+        '''
         size = struct.calcsize("BBBx")
         if start == 0:
             r, g, b = struct.unpack("BBBx", data[:size])
-            return size, RGBColor(r, g, b)
+            return size, cls(r, g, b)
         else:
             r, g, b = struct.unpack("BBBx", data[start:start + size])
-            return (start + size), RGBColor(r, g, b)
+            return (start + size), cls(r, g, b)
 
     @classmethod
-    def fromHSV(cls: Type[CT], hue: int, saturation: int, value: int) -> CT:
-        return RGBColor(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
-
-
-def intToRGB(color: int) -> RGBColor:
-    return RGBColor(color & 0x000000FF, (color >> 8) & 0x000000FF, (color >> 16) & 0x000000FF)
+    def fromHSV(cls, hue: int, saturation: int, value: int) -> CT:
+        '''
+        Creates a RGBColor object from HSV values using colorsys
+        '''
+        return cls(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
 
 
 @dataclass
 class LEDData(object):
     name: str
     value: int
+
+    @classmethod
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, LDT]:
+        '''
+        Creates a new LEDData object from raw bytes
+
+        :param data: the raw bytes from the SDK
+        :param start: what place in the data object to start
+        '''
+        start, name = parse_string(data, start)
+        value = struct.unpack("I", data[start:start + struct.calcsize("I")])[0]
+        start += struct.calcsize("I")
+        return start, cls(name.strip("\x00"), value)
 
 
 @dataclass
@@ -170,6 +209,24 @@ class ModeData(object):
 
         return size, data
 
+    @classmethod
+    def unpack(cls, data: bytearray, start: int = 0, index: int = 0) -> Tuple[int, MDT]:
+        '''
+        Creates a new ModeData object from raw bytes
+
+        :param data: the raw bytes from the SDK
+        :param start: what place in the data object to start
+        :param index: which mode this is
+        '''
+        start, val = parse_string(data, start)
+        buff = list(struct.unpack("i8IH", data[start:start + struct.calcsize("i8IH")]))
+        start += struct.calcsize("i8IH")
+        colors = []
+        for i in range(buff[-1]):
+            colors.append(RGBColor.unpack(data, start))
+            start += RGBColor.size
+        return start, cls(index, val.strip('\x00'), buff[0], ModeFlags(buff[1]), *buff[2:7], ModeDirections(buff[8]), ModeColors(buff[9]), colors)
+
 
 @dataclass
 class ZoneData(object):
@@ -185,6 +242,31 @@ class ZoneData(object):
     colors: List[RGBColor] = None
     start_idx: int = None
 
+    @classmethod
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, ZDT]:
+        '''
+        Unpacks the raw data into a ZoneData object
+
+        :param data: The raw byte data to unpack
+        :param start: What place in the data object to start
+        '''
+        start, name = parse_string(data, start)
+        buff = list(struct.unpack("iIIIH", data[start:start + struct.calcsize("iIIIH")]))
+        start += struct.calcsize("iIIIH")
+
+        height, width = 0, 0
+        matrix = [[]]
+        if buff[-1] > 0:
+            height, width = struct.unpack("II", data[start:start + struct.calcsize("II")])
+            start += struct.calcsize("II")
+            print(height, width)
+            matrix = [[] for x in range(height)]
+            for y in range(height):
+                for x in range(width):
+                    matrix[y][x] = struct.unpack("I", data[start:start + struct.calcsize("I")])
+                    start += struct.calcsize("I")
+        return start, cls(name.strip('\x00'), ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
+
 
 @dataclass
 class MetaData(object):
@@ -192,6 +274,20 @@ class MetaData(object):
     version: str
     serial: str
     location: str
+
+    @classmethod
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, MEDT]:
+        '''
+        Unpacks the raw data into a MetaData object
+
+        :param data: The raw byte data to unpack
+        :param start: What place in the data object to start
+        '''
+        buff = []
+        for x in range(4):
+            start, val = parse_string(data, start)
+            buff.append(val)
+        return start, cls(*buff)
 
 
 @dataclass
@@ -205,10 +301,63 @@ class ControllerData(object):
     colors: list
     active_mode: int
 
+    @classmethod
+    def unpack(cls, data: bytearray) -> CDT:
+        '''
+        Unpacks the raw bytes received from the SDK into a ControllerData dataclass
+
+        :param data: The raw data from a response to a request for device data
+        :returns: A ControllerData dataclass ready to pass into the OpenRGBClient's calback function
+        '''
+        buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
+        location = struct.calcsize("Ii")
+        device_type = buff[1]
+        location, name = parse_string(data, location)
+        location, metadata = MetaData.unpack(data, location)
+        buff = struct.unpack("=Hi", data[location:location + struct.calcsize("=Hi")])
+        location += struct.calcsize("=Hi")
+        num_modes = buff[0]
+        active_mode = buff[-1]
+        modes = []
+        for x in range(num_modes):
+            location, mode = ModeData.unpack(data, location, x)
+            modes.append(mode)
+        location, zones = parse_list(ZoneData, data, location)
+        location, leds = parse_list(LEDData, data, location)
+        location, colors = parse_list(RGBColor, data, location)
+        for zone in zones:
+            zone.leds = []
+            zone.colors = []
+            for x in range(len(leds)):
+                if zone.name in leds[x].name:
+                    zone.leds.append(leds[x])
+                    zone.colors.append(colors[x])
+        # print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
+        # print(metadata, sep="\n\t")
+        # print("Mode Information:\n", "\tNumber of modes:", len(modes), "\n\tActive Mode:", active_mode, "\n\t", end="")
+        # print(*modes, sep='\n\t')
+        # print("Zone Information:\n", "\tNumber of zones:", len(zones), "\n\t", end="")
+        # print(*zones, sep='\n\t')
+        # print("LED Information:\n", "\tNumber of LEDs:", len(leds), "\n\t", end="")
+        # print(*leds, sep="\n\t")
+        # print("Color Information:\n", "\tNumber of Colors:", len(colors), "\n\t", end="")
+        # print(*colors, sep="\n\t")
+        # print("---------------------------------")
+        return cls(
+            name,
+            metadata,
+            DeviceType(device_type),
+            leds,
+            zones,
+            modes,
+            colors,
+            active_mode
+        )
+
 
 class RGBObject(object):
     '''
-    A parent object that includes a few generic functions that use the
+    A parent class that includes a few generic functions that use the
     implementation provided by the children.
     '''
 
@@ -221,13 +370,21 @@ class RGBObject(object):
         return f"{type(self).__name__}(name={self.name}, id={self.id})"
 
     def set_color(self, color: RGBColor, start: int = 0, end: int = 0):
-        pass
+        '''
+        Sets the color
 
-    def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0):
+        :param color: the color to set
+        '''
         pass
 
     def clear(self):
+        '''
+        Turns all of the LEDS off
+        '''
         self.set_color(RGBColor(0, 0, 0))
 
     def off(self):
+        '''
+        Same as RGBObject.clear
+        '''
         self.clear()
