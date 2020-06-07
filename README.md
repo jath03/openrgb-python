@@ -49,7 +49,7 @@ motherboard.set_mode("breathing")
 
 # API docs
 
-https://openrgb-python.readthedocs.io/en/stable/
+https://openrgb-python.readthedocs.io/en/latest/
 
 
 For an alternative python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
