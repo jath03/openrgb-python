@@ -42,6 +42,7 @@ extensions = [
     'recommonmark'
 ]
 
+
 source_suffix = {
     '.rst': 'restructuredtext',
     '.txt': 'markdown',
@@ -79,6 +80,8 @@ html_static_path = []#'_static']
 
 
 # -- Extension configuration -------------------------------------------------
+
+autoclass_content = 'both'
 
 # -- Options for todo extension ----------------------------------------------
 
