@@ -15,6 +15,8 @@ SDK Feature Support:
   - [x] Setting mode
   - [x] Setting custom mode
   - [ ] resizing zones
+  - [x] Loading profiles
+  - [x] Saving profiles
 
 # Installation
 
@@ -44,6 +46,7 @@ motherboard.set_color(RGBColor(0, 255, 0))
 motherboard.zones[0].set_color(RGBColor(255, 0, 0))
 motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
 motherboard.set_mode("breathing")
+client.save_profile("profile1")
 ```
 
 

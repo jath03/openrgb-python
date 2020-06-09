@@ -13,6 +13,12 @@ class NetworkClient(object):
     '''
 
     def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
+        '''
+        :param update_callback: the function to call when data is received
+        :param address: the ip address of the SDK server
+        :param port: the port of the SDK server
+        :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
+        '''
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         for x in range(5):
             try:

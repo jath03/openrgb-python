@@ -7,3 +7,4 @@ dist
 _build
 _static
 _templates
+_test.py

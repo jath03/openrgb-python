@@ -88,6 +88,17 @@ def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
     return start, val.strip("\x00")
 
 
+def pack_string(string: str) -> bytearray:
+    '''
+    Packs a string into bytes
+
+    :param string: the string to pack
+    :returns: bytes ready to be used
+    '''
+    num = len(string)
+    return struct.pack(f"H{num}s", num + 1, string.encode('utf-8')) + b'\x00'
+
+
 def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List]:
     '''
     Parses a list of objects and returns them
@@ -105,6 +116,16 @@ def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List
     return start, things
 
 
+def pack_list(things: list) -> bytearray:
+    '''
+    Packs a list of things using the things' .pack() methods
+
+    :param things: a list of things to pack
+    :returns: bytes ready to be used
+    '''
+    return bytes(struct.pack("H", len(things))) + b''.join(thing.pack() for thing in things)
+
+
 @dataclass
 class RGBColor(object):
     red: int
@@ -113,9 +134,9 @@ class RGBColor(object):
 
     def pack(self) -> bytearray:
         '''
-        packs itself into bytes, ready to be sent to the SDK
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
-        :returns: data ready to be sent
+        :returns: raw data ready to be sent or saved
         '''
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
@@ -147,6 +168,17 @@ class LEDData(object):
     name: str
     value: int
 
+    def pack(self) -> bytearray:
+        '''
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+
+        :returns: raw data ready to be sent or saved
+        '''
+        return (
+            pack_string(self.name)
+            + struct.pack("I", self.value)
+        )
+
     @classmethod
     def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, LDT]:
         '''
@@ -158,7 +190,7 @@ class LEDData(object):
         start, name = parse_string(data, start)
         value = struct.unpack("I", data[start:start + struct.calcsize("I")])[0]
         start += struct.calcsize("I")
-        return start, cls(name.strip("\x00"), value)
+        return start, cls(name, value)
 
 
 @dataclass
@@ -176,38 +208,31 @@ class ModeData(object):
     color_mode: ModeColors
     colors: List[RGBColor]
 
-    def pack(self) -> Tuple[int, bytearray]:
+    def pack(self) -> bytearray:
         '''
-        Packs itself into bytes ready to be sent to the SDK
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
-        :returns: data ready to be sent and its size
+        :returns: raw data ready to be sent or saved
         '''
-        # IDK why size = struct.calcsize(f"IiH{len(self.name)}si8IH{len(self.colors)}I")
-        #  doesn't work without the if, but when self.colors is empty it still adds 2 bytes on for it
-        if len(self.colors) == 0:
-            size = struct.calcsize(f"IiH{len(self.name)}si8IH")
-        else:
-            size = struct.calcsize(f"IiH{len(self.name)}si8IH{len(self.colors)}I")
-        data = struct.pack(
-            f"IiH{len(self.name)}si8IH",
-            size,
-            self.id,
-            len(self.name),
-            self.name.encode('utf-8'),
-            self.value,
-            self.flags,
-            self.speed_min,
-            self.speed_max,
-            self.colors_min,
-            self.colors_max,
-            self.speed,
-            self.direction,
-            self.color_mode,
-            len(self.colors)
+        data = (
+            struct.pack("i", self.id)
+            + pack_string(self.name)
+            + struct.pack(
+                f"=i8I",
+                self.value,
+                self.flags,
+                self.speed_min if self.speed_min is not None else 0,
+                self.speed_max if self.speed_max is not None else 0,
+                self.colors_min if self.colors_min is not None else 0,
+                self.colors_max if self.colors_max is not None else 0,
+                self.speed if self.speed is not None else 0,
+                self.direction if self.direction is not None else 0,
+                self.color_mode
+            )
         )
-        data += bytearray((color.pack() for color in self.colors))
-
-        return size, data
+        data += pack_list(self.colors)
+        data = struct.pack("I", len(data) + struct.calcsize("I")) + data
+        return data
 
     @classmethod
     def unpack(cls, data: bytearray, start: int = 0, index: int = 0) -> Tuple[int, MDT]:
@@ -222,10 +247,25 @@ class ModeData(object):
         buff = list(struct.unpack("i8IH", data[start:start + struct.calcsize("i8IH")]))
         start += struct.calcsize("i8IH")
         colors = []
+        buff[1] = ModeFlags(buff[1])
+
+        # Garbage data will be sent if these flags aren't set
+        if (ModeFlags.MODE_FLAG_HAS_DIRECTION_HV in buff[1]
+                or ModeFlags.MODE_FLAG_HAS_DIRECTION_UD in buff[1]
+                or ModeFlags.MODE_FLAG_HAS_DIRECTION_LR in buff[1]):
+            buff[7] = ModeDirections(buff[7])
+        else:
+            buff[7] = None
+        if ModeFlags.MODE_FLAG_HAS_SPEED not in buff[1]:
+            buff[2], buff[3], buff[6] = None, None, None
+        if ModeFlags.MODE_FLAG_HAS_BRIGHTNESS not in buff[1]:
+            buff[4], buff[5] = None, None
+
+        buff[8] = ModeColors(buff[8])
         for i in range(buff[-1]):
             colors.append(RGBColor.unpack(data, start))
             start += RGBColor.size
-        return start, cls(index, val.strip('\x00'), buff[0], ModeFlags(buff[1]), *buff[2:7], ModeDirections(buff[8]), ModeColors(buff[9]), colors)
+        return start, cls(index, val, *buff[:9], colors)
 
 
 @dataclass
@@ -241,6 +281,36 @@ class ZoneData(object):
     leds: List[LEDData] = None
     colors: List[RGBColor] = None
     start_idx: int = None
+
+    def pack(self) -> bytearray:
+        '''
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+
+        :returns: raw data ready to be sent or saved
+        '''
+        data = (
+            pack_string(self.name)
+            + struct.pack(
+                "i3I",
+                self.zone_type,
+                self.leds_min,
+                self.leds_max,
+                self.num_leds
+            )
+        )
+        if self.mat_height > 0 and self.mat_width > 0:
+            flat = [i for li in self.matrix_map for i in li]
+            assert len(flat) == (self.mat_width * self.mat_height)
+            data += struct.pack(
+                f"HII{len(flat)}I",
+                len(flat),
+                self.mat_height,
+                self.mat_width,
+                *flat
+            )
+        else:
+            data += struct.pack("H", 0)
+        return data
 
     @classmethod
     def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, ZDT]:
@@ -265,7 +335,7 @@ class ZoneData(object):
                 for x in range(width):
                     matrix[y][x] = struct.unpack("I", data[start:start + struct.calcsize("I")])
                     start += struct.calcsize("I")
-        return start, cls(name.strip('\x00'), ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
+        return start, cls(name, ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
 
 
 @dataclass
@@ -274,6 +344,19 @@ class MetaData(object):
     version: str
     serial: str
     location: str
+
+    def pack(self) -> bytearray:
+        '''
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+
+        :returns: raw data ready to be sent or saved
+        '''
+        return (
+            pack_string(self.description)
+            + pack_string(self.version)
+            + pack_string(self.serial)
+            + pack_string(self.location)
+        )
 
     @classmethod
     def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, MEDT]:
@@ -295,36 +378,56 @@ class ControllerData(object):
     name: str
     metadata: MetaData
     device_type: DeviceType
-    leds: list
-    zones: list
-    modes: list
-    colors: list
+    leds: List[LEDData]
+    zones: List[ZoneData]
+    modes: List[ModeData]
+    colors: List[RGBColor]
     active_mode: int
 
+    def pack(self) -> bytearray:
+        '''
+        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+
+        :returns: raw data ready to be sent or saved
+        '''
+        buff = (
+            struct.pack("i", self.device_type)
+            + pack_string(self.name)
+            + self.metadata.pack()
+            + struct.pack("H", len(self.modes))
+            + struct.pack("i", self.active_mode)
+            + b''.join(mode.pack()[struct.calcsize("Ii"):] for mode in self.modes)
+            + pack_list(self.zones)
+            + pack_list(self.leds)
+            + pack_list(self.colors)
+        )
+        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
+        return buff
+
     @classmethod
-    def unpack(cls, data: bytearray) -> CDT:
+    def unpack(cls, data: bytearray, start: int = 0) -> CDT:
         '''
         Unpacks the raw bytes received from the SDK into a ControllerData dataclass
 
         :param data: The raw data from a response to a request for device data
         :returns: A ControllerData dataclass ready to pass into the OpenRGBClient's calback function
         '''
-        buff = struct.unpack("Ii", data[:struct.calcsize("Ii")])
-        location = struct.calcsize("Ii")
+        buff = struct.unpack("Ii", data[start:start + struct.calcsize("Ii")])
+        start += struct.calcsize("Ii")
         device_type = buff[1]
-        location, name = parse_string(data, location)
-        location, metadata = MetaData.unpack(data, location)
-        buff = struct.unpack("=Hi", data[location:location + struct.calcsize("=Hi")])
-        location += struct.calcsize("=Hi")
+        start, name = parse_string(data, start)
+        start, metadata = MetaData.unpack(data, start)
+        buff = struct.unpack("=Hi", data[start:start + struct.calcsize("=Hi")])
+        start += struct.calcsize("=Hi")
         num_modes = buff[0]
         active_mode = buff[-1]
         modes = []
         for x in range(num_modes):
-            location, mode = ModeData.unpack(data, location, x)
+            start, mode = ModeData.unpack(data, start, x)
             modes.append(mode)
-        location, zones = parse_list(ZoneData, data, location)
-        location, leds = parse_list(LEDData, data, location)
-        location, colors = parse_list(RGBColor, data, location)
+        start, zones = parse_list(ZoneData, data, start)
+        start, leds = parse_list(LEDData, data, start)
+        start, colors = parse_list(RGBColor, data, start)
         for zone in zones:
             zone.leds = []
             zone.colors = []

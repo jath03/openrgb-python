@@ -3,7 +3,7 @@ from openrgb import OpenRGBClient
 from openrgb.utils import RGBColor, DeviceType
 import sensors
 from time import sleep
-from pynvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU
+from py3nvml.py3nvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU
 # import psutil
 
 
