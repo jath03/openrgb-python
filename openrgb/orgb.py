@@ -234,14 +234,14 @@ class OpenRGBClient(utils.RGBObject):
         '''
         return [device for device in self.devices if device.type == type]
 
-    def load_profile(self, name: str, directory: str):
+    def load_profile(self, name: str, directory: str = ''):
         '''
         Loads an OpenRGB profile file
 
         :param name: the name of the profile
         :param directory: what directory the profile is in.  Defaults to HOME/.config/OpenRGB
         '''
-        if directory == None:
+        if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory}/{name}.orp', 'rb') as f:
             header = f.read(16 + struct.calcsize("I"))
@@ -275,7 +275,7 @@ class OpenRGBClient(utils.RGBObject):
                     if new_controller.active_mode != device.active_mode:
                         device.set_mode(new_controller.active_mode)
 
-    def save_profile(self, name: str, directory: str):
+    def save_profile(self, name: str, directory: str = ''):
         '''
         Saves the current state of all of your devices to an OpenRGB profile
         file
@@ -283,7 +283,7 @@ class OpenRGBClient(utils.RGBObject):
         :param name: the name of the profile to save
         :param directory: what directory to save the profile in.  Defaults to HOME/.config/OpenRGB
         '''
-        if directory == None:
+        if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
             data = bytearray()
