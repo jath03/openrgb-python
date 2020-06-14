@@ -20,17 +20,7 @@ class NetworkClient(object):
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         '''
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        for x in range(5):
-            try:
-                self.sock.connect((address, port))
-                break
-            except ConnectionRefusedError:
-                # if x < 4:
-                print("Unable to connect.  Is the OpenRGB SDK server started?")
-                print("Retrying in 5 seconds...\n")
-                sleep(5)
-                # elif x == 4:
-                #     raise
+        self.sock.connect((address, port))
 
         self.listener = threading.Thread(target=self.listen)
         self.listener.daemon = True
