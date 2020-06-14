@@ -42,27 +42,24 @@ class NetworkClient(object):
 
         :raises ConnectionError: when it loses connection to the SDK
         '''
-        try:
-            while True:
-                header = bytearray(utils.HEADER_SIZE)
-                self.sock.recv_into(header)
+        while True:
+            header = bytearray(utils.HEADER_SIZE)
+            self.sock.recv_into(header)
 
-                # Unpacking the contents of the raw header struct into a list
-                buff = list(struct.unpack('ccccIII', header))
-                # print(buff[:4])
-                if buff[:4] == [b'O', b'R', b'G', b'B']:
-                    device_id, packet_type, packet_size = buff[4:]
-                    # print(device_id, packet_type, packet_size)
-                    if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
-                        buff = struct.unpack("I", self.sock.recv(packet_size))
-                        self.callback(device_id, packet_type, buff[0])
-                    elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
-                        data = bytearray(packet_size)
-                        self.sock.recv_into(data)
-                        self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
-                sleep(.2)
-        except BrokenPipeError:
-            raise ConnectionError("Disconnected.  Did you disable the SDK?")
+            # Unpacking the contents of the raw header struct into a list
+            buff = list(struct.unpack('ccccIII', header))
+            # print(buff[:4])
+            if buff[:4] == [b'O', b'R', b'G', b'B']:
+                device_id, packet_type, packet_size = buff[4:]
+                # print(device_id, packet_type, packet_size)
+                if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+                    buff = struct.unpack("I", self.sock.recv(packet_size))
+                    self.callback(device_id, packet_type, buff[0])
+                elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+                    data = bytearray(packet_size)
+                    self.sock.recv_into(data)
+                    self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
+            sleep(.2)
 
     def requestDeviceData(self, device: int):
         '''
@@ -80,7 +77,4 @@ class NetworkClient(object):
         :param packet_type: a utils.PacketType
         :param packet_size: the full size of the data to be send after the header
         '''
-        try:
-            self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
-        except BrokenPipeError:
-            raise ConnectionError("Disconnected.  Did you disable the SDK?")
+        self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
