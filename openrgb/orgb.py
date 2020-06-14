@@ -28,6 +28,7 @@ class LED(utils.RGBObject):
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize("i3bx"))
         buff = struct.pack("i", self.id) + color.pack()
         self.comms.sock.send(buff)
+        self.comms.requestDeviceData(self.device_id)
 
 
 class Zone(utils.RGBObject):
@@ -165,8 +166,11 @@ class Device(utils.RGBObject):
         )
         self.comms.sock.send(data)
         self.active_mode = mode.id
+        self.data.active_mode = self.active_mode
         if len(mode.colors) == len(self.colors):
             self.colors = mode.colors
+            self.data.colors = self.colors
+        self.data.modes = self.modes
 
     def set_custom_mode(self):
         self.comms.send_header(
@@ -283,6 +287,7 @@ class OpenRGBClient(utils.RGBObject):
         :param name: the name of the profile to save
         :param directory: what directory to save the profile in.  Defaults to HOME/.config/OpenRGB
         '''
+        self.get_device_info()
         if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
