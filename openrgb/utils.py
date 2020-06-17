@@ -263,8 +263,8 @@ class ModeData(object):
 
         buff[8] = ModeColors(buff[8])
         for i in range(buff[-1]):
-            colors.append(RGBColor.unpack(data, start))
-            start += RGBColor.size
+            start, color = RGBColor.unpack(data, start)
+            colors.append(color)
         return start, cls(index, val, *buff[:9], colors)
 
 
