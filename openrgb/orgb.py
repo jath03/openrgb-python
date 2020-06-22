@@ -248,36 +248,23 @@ class OpenRGBClient(utils.RGBObject):
         if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory}/{name}.orp', 'rb') as f:
-            header = f.read(16 + struct.calcsize("I"))
-            if struct.unpack("16s", header[:16])[0] != b"OPENRGB_PROFILE\x00":
-                raise ValueError("The file is not an OpenRGB profile")
-            version = struct.unpack("I", header[16:])[0]
-            if version == 1:
-                controllers = []
-                while True:
-                    d = f.read(struct.calcsize("I"))
-                    if len(d) < struct.calcsize("I"):
-                        break
-                    size = struct.unpack("I", d)[0]
-                    f.seek(f.tell() - struct.calcsize("I"))
-                    new_data = utils.ControllerData.unpack(f.read(size))
-                    controllers.append(new_data)
-                pairs = []
-                for device in self.devices:
-                    for new_controller in controllers:
-                        if new_controller.name == device.name \
-                                and new_controller.device_type == device.type \
-                                and new_controller.metadata.description == device.metadata.description:
-                            controllers.remove(new_controller)
-                            pairs.append((new_controller, device))
-                # print("Pairs:")
-                for new_controller, device in pairs:
-                    # print(device.name, new_controller.name)
-                    if new_controller.colors != device.colors:
-                        device.set_colors(new_controller.colors)
-                    # print(new_controller.active_mode)
-                    if new_controller.active_mode != device.active_mode:
-                        device.set_mode(new_controller.active_mode)
+            controllers = utils.Profile.unpack(f).controllers
+            pairs = []
+            for device in self.devices:
+                for new_controller in controllers:
+                    if new_controller.name == device.name \
+                            and new_controller.device_type == device.type \
+                            and new_controller.metadata.description == device.metadata.description:
+                        controllers.remove(new_controller)
+                        pairs.append((new_controller, device))
+            # print("Pairs:")
+            for new_controller, device in pairs:
+                # print(device.name, new_controller.name)
+                if new_controller.colors != device.colors:
+                    device.set_colors(new_controller.colors)
+                # print(new_controller.active_mode)
+                if new_controller.active_mode != device.active_mode:
+                    device.set_mode(new_controller.active_mode)
 
     def save_profile(self, name: str, directory: str = ''):
         '''
@@ -291,11 +278,7 @@ class OpenRGBClient(utils.RGBObject):
         if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
-            data = bytearray()
-            data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
-            for dev in self.devices:
-                data += dev.data.pack()
-            f.write(data)
+            f.write(utils.Profile(self.devices).pack())
 
     def get_device_info(self):
         '''

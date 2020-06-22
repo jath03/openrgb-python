@@ -7,12 +7,12 @@ from py3nvml.py3nvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetT
 # import psutil
 
 
-rgb = OpenRGBClient()
+cli = OpenRGBClient()
 nvmlInit()
 
-cooler = rgb.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
-gpu = rgb.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
-# right_ram, left_ram = rgb.get_devices_by_type(DeviceType.DEVICE_TYPE_DRAM)
+cooler = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
+gpu = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
+# right_ram, left_ram = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_DRAM)
 
 handle = nvmlDeviceGetHandleByIndex(0)
 

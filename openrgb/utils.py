@@ -1,5 +1,5 @@
 from enum import IntEnum, IntFlag
-from typing import List, TypeVar, Tuple
+from typing import List, TypeVar, Tuple, BinaryIO
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -71,6 +71,7 @@ ZDT = TypeVar("ZDT", bound="ZoneData") # ZoneData Type
 LDT = TypeVar("LDT", bound="LEDData") # LedData Type
 MEDT = TypeVar("MEDT", bound="MetaData") # MEtaData Type
 CDT = TypeVar("CDT", bound="ControllerData") # ControllerData Type
+PT = TypeVar("PT", bound="Profile") # Profile Type
 
 
 def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
@@ -456,6 +457,39 @@ class ControllerData(object):
             colors,
             active_mode
         )
+
+
+@dataclass
+class Profile(object):
+    '''
+    A dataclass to load, store, and pack the data found in an OpenRGB profile file.
+    '''
+    controllers: List[ControllerData]
+
+    def pack(self) -> bytearray:
+        data = bytearray()
+        data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
+        for dev in self.controllers:
+            data += dev.data.pack()
+        return data
+
+    @classmethod
+    def unpack(cls, profile: BinaryIO) -> PT:
+        header = profile.read(16 + struct.calcsize("I"))
+        if struct.unpack("16s", header[:16])[0] != b"OPENRGB_PROFILE\x00":
+            raise ValueError("The file is not an OpenRGB profile")
+        version = struct.unpack("I", header[16:])[0]
+        if version == 1:
+            controllers = []
+            while True:
+                d = profile.read(struct.calcsize("I"))
+                if len(d) < struct.calcsize("I"):
+                    break
+                size = struct.unpack("I", d)[0]
+                profile.seek(profile.tell() - struct.calcsize("I"))
+                new_data = ControllerData.unpack(profile.read(size))
+                controllers.append(new_data)
+            return cls(controllers)
 
 
 class RGBObject(object):

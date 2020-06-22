@@ -16,6 +16,8 @@ SDK Feature Support:
   - [x] Setting mode
   - [x] Setting custom mode
   - [ ] Resizing zones
+
+Additional Features (Not part of the OpenRGB SDK):
   - [x] Loading profiles
   - [x] Saving profiles
 
