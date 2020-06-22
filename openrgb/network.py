@@ -12,7 +12,7 @@ class NetworkClient(object):
     A class for interfacing with the OpenRGB SDK
     '''
 
-    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python"):
+    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python"):
         '''
         :param update_callback: the function to call when data is received
         :param address: the ip address of the SDK server

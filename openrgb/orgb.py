@@ -187,7 +187,7 @@ class OpenRGBClient(utils.RGBObject):
     custom mode and creates Devices, Zones, and LEDs for you.
     '''
 
-    def __init__(self, address: str = "127.0.0.1", port: int = 1337, name: str = "openrgb-python", custom: bool = True):
+    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", custom: bool = True):
         '''
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
