@@ -330,12 +330,16 @@ class ZoneData(object):
         if buff[-1] > 0:
             height, width = struct.unpack("II", data[start:start + struct.calcsize("II")])
             start += struct.calcsize("II")
-            print(height, width)
             matrix = [[] for x in range(height)]
             for y in range(height):
                 for x in range(width):
-                    matrix[y][x] = struct.unpack("I", data[start:start + struct.calcsize("I")])
-                    start += struct.calcsize("I")
+                    try:
+                        matrix[y][x] = struct.unpack("I", data[start:start + struct.calcsize("I")])
+                        start += struct.calcsize("I")
+                    except IndexError:
+                        print("didn't work (indexerror), here's some relavent data")
+                        print(data)
+                        print(buff)
         return start, cls(name, ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
 
 
