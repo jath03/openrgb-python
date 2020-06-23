@@ -15,5 +15,5 @@ except:
 while True:
     for color in (RGBColor(255, 0, 0), RGBColor(0, 255, 0), RGBColor(0, 0, 255), RGBColor(0, 0, 0)):
         for x in range(len(keys_zone.leds)):
-            keys_zone.set_color(color, end=x)
+            keys_zone.set_color(color, end=(x + 1))
             sleep(.3)
