@@ -321,29 +321,20 @@ class ZoneData(object):
         :param data: The raw byte data to unpack
         :param start: What place in the data object to start
         '''
-        print("index of start of zone: ", start)
         start, name = parse_string(data, start)
         buff = list(struct.unpack("iIIIH", data[start:start + struct.calcsize("iIIIH")]))
         start += struct.calcsize("iIIIH")
-
         height, width = 0, 0
         matrix = [[]]
         if buff[0] == ZoneType.ZONE_TYPE_MATRIX:
             height, width = struct.unpack("II", data[start:start + struct.calcsize("II")])
             start += struct.calcsize("II")
-            print(f"Dimensions: {width}x{height}")
             matrix = [[] for x in range(height)]
-            print("Empty matrix: ", matrix)
-            print("Matrix Data: ", data[start:])
             for y in range(height):
-                for x in range(width):
-                    try:
-                        matrix[y][x] = struct.unpack("I", data[start:start + struct.calcsize("I")])
-                        start += struct.calcsize("I")
-                    except IndexError:
-                        pass
-            print("Matrix: ", matrix)
-            print("index of end of zone: ", start)
+                matrix[y] = struct.unpack(f"{width}I", data[start:start + struct.calcsize("I")*width])
+                start += struct.calcsize("I")*width
+            for idx, row in enumerate(matrix):
+                matrix[idx] = [x if x != 0xFFFFFFFF else None for x in row]
         return start, cls(name, ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
 
 
