@@ -29,9 +29,17 @@ Use this method for the newest, but possibly buggy, package:
 
 `pip3 install git+https://github.com/jath03/openrgb-python#egg=openrgb-python`
 
+Arch Linux:
+`yay -S python-openrgb-git`
+
 For a more stable package:
 
 `pip3 install openrgb-python`
+
+Arch Linux:
+`yay -S python-openrgb`
+
+Thanks to @GabMus for the AUR packages
 
 # Usage
 
