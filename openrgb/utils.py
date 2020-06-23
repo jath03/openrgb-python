@@ -331,7 +331,7 @@ class ZoneData(object):
             start += struct.calcsize("II")
             matrix = [[] for x in range(height)]
             for y in range(height):
-                matrix[y] = struct.unpack(f"{width}I", data[start:start + struct.calcsize("I")*width])
+                matrix[y] = list(struct.unpack(f"{width}I", data[start:start + struct.calcsize("I")*width]))
                 start += struct.calcsize("I")*width
             for idx, row in enumerate(matrix):
                 matrix[idx] = [x if x != 0xFFFFFFFF else None for x in row]
