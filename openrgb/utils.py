@@ -340,6 +340,7 @@ class ZoneData(object):
                         print("didn't work (indexerror), here's some relavent data")
                         print(data)
                         print(buff)
+            print("Matrix: ", matrix)
         return start, cls(name, ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
 
 
