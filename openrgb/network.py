@@ -5,6 +5,12 @@ import threading
 from openrgb import utils
 from typing import Callable
 from time import sleep
+from enum import Enum
+
+
+class Status(Enum):
+    WAITING = 1
+    IDLE = 2
 
 
 class NetworkClient(object):
@@ -27,6 +33,7 @@ class NetworkClient(object):
         self.listener.start()
 
         self.callback = update_callback
+        self.state = Status.IDLE
 
         # Sending the client name
         name = bytes(f"{name}\0", 'utf-8')
@@ -35,6 +42,7 @@ class NetworkClient(object):
 
         # Requesting the number of devices
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
+        self.state = Status.WAITING
 
     def listen(self):
         '''
@@ -55,10 +63,12 @@ class NetworkClient(object):
                 if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
                     self.callback(device_id, packet_type, buff[0])
+                    self.state = Status.IDLE
                 elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                     data = bytearray(packet_size)
                     self.sock.recv_into(data)
                     self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
+                    self.state = Status.IDLE
             sleep(.2)
 
     def requestDeviceData(self, device: int):
@@ -68,6 +78,14 @@ class NetworkClient(object):
         :param device: the id of the device to request data for
         '''
         self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
+        self.state = Status.WAITING
+        p = threading.Thread(target=self.timeout)
+        p.start()
+        p.join(3)
+        if p.is_alive():
+            p.terminate()
+            p.join()
+            raise TimeoutError("OpenRGB SDK Timed out responding to request for device data")
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
         '''
@@ -78,3 +96,7 @@ class NetworkClient(object):
         :param packet_size: the full size of the data to be send after the header
         '''
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
+
+    def timeout(self):
+        while self.state == Status.WAITING:
+            sleep(.05)

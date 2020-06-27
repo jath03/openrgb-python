@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 from openrgb import OpenRGBClient
 from openrgb.utils import RGBColor, DeviceType
-import sensors
 from time import sleep
 from py3nvml.py3nvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU
-# import psutil
+import psutil
+from typing import Tuple
 
 
-cli = OpenRGBClient()
+# Getting this script ready to be run as a service. Waiting for the sdk to start.
+while True:
+    try:
+        cli = OpenRGBClient()
+        break
+    except ConnectionRefusedError:
+        sleep(5)
+        continue
+
 nvmlInit()
 
 cooler = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
@@ -17,12 +25,13 @@ gpu = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
 handle = nvmlDeviceGetHandleByIndex(0)
 
 
-def temp_to_color(temp: int) -> (int, int):
-    if temp < 40:
+def temp_to_color(temp: int, min: int, max: int) -> Tuple[int, int]:
+    multiplier = 240/(max - min)
+    if temp < min:
         return 0, 255
-    elif temp < 70:
-        return int((temp - 40) * 8), int((70 - temp) * 8)
-    elif temp >= 70:
+    elif temp < max:
+        return int((temp - min) * multiplier), int((max - temp) * multiplier)
+    elif temp >= max:
         return 255, 0
 
 
@@ -30,49 +39,55 @@ def temp_to_color(temp: int) -> (int, int):
 # left_ram.clear()
 
 
-try:
-    while True:
-        ### CPU Temp
-        sensors.init()
-        chips = tuple(sensors.iter_detected_chips())
-        # This sensor selection is based on my computer, I suggest using a debugger
-        #   or print statements to figure out what chip and feature you want
-        chip = [i for i in chips if i.prefix == b"k10temp"][0]
+# To make sure the devices are in the right mode, and to work around a problem
+#   where the gpu won't change colors until switched out of static mode and
+#   then back into static mode.
+cooler.set_mode(0)  # Direct mode
+gpu.set_mode(1)  # Anything would work, this is breathing in my setup
+sleep(.1)
+gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
 
-        feature = [i for i in chip if i.name == "temp1"][0]
-        temp = feature.get_value()
-        red, blue = temp_to_color(temp)
+while True:
+    try:
+        ### CPU Temp
+        temp = psutil.sensors_temperatures()['k10temp'][-1].current
+
+        red, blue = temp_to_color(temp, 45, 75)
         cooler.set_color(RGBColor(red, 0, blue))
 
         ### GPU Temp
         temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
-        red, blue = temp_to_color(temp)
+        red, blue = temp_to_color(temp, 35, 65)
         gpu.set_color(RGBColor(red, 0, blue))
 
-        ### CPU Usage
-        ### Commented out because it was setting too many values at once, causing a significant delay
-        ###     between temperature change and color change that accumulated with each loop.
-        # usage = psutil.cpu_percent()
+        ### RAM Usage
+        ### Works fine
+        # usage = psutil.virtual_memory().percent
         # if usage < 20:
-        #     left_ram.set_color(RGBColor(0, 0, 0), end=4)
-        #     left_ram.set_led_color(4, RGBColor(int(usage*10), 0, 0))
+        #     right_ram.set_color(RGBColor(0, 0, 0), end=4)
+        #     right_ram.leds[4].set_color(RGBColor(0, 0, int(usage*10)))
         # elif usage < 40:
-        #     left_ram.set_color(RGBColor(0, 0, 0), end=3)
-        #     left_ram.set_led_color(3, RGBColor(int((usage - 20)*10), 0, 0))
-        #     left_ram.set_led_color(4, RGBColor(255, 0, 0))
+        #     right_ram.set_color(RGBColor(0, 0, 0), end=3)
+        #     right_ram.leds[3].set_color(RGBColor(0, 0, int((usage - 20)*10)))
+        #     right_ram.leds[4].set_color(RGBColor(0, 0, 255))
         # elif usage < 60:
-        #     left_ram.set_color(RGBColor(0, 0, 0), end=2)
-        #     left_ram.set_led_color(2, RGBColor(int((usage - 40)*10), 0, 0))
-        #     left_ram.set_color(RGBColor(0, 0, 0), start=3)
+        #     right_ram.set_color(RGBColor(0, 0, 0), end=2)
+        #     right_ram.leds[2].set_color(RGBColor(0, 0, int((usage - 40)*10)))
+        #     right_ram.set_color(RGBColor(0, 0, 255), start=3)
         # elif usage < 80:
-        #     left_ram.set_led_color(0, RGBColor(0, 0, 0))
-        #     left_ram.set_led_color(1, RGBColor(int((usage - 60)*10), 0, 0))
-        #     left_ram.set_color(RGBColor(0, 0, 0), start=2)
+        #     right_ram.set_color(RGBColor(0, 0, 255), start=2)
+        #     right_ram.leds[0].set_color(RGBColor(0, 0, 0))
+        #     right_ram.leds[1].set_color(RGBColor(0, 0, int((usage - 60)*10)))
         # else:
-        #     left_ram.set_led_color(0, RGBColor(int((usage - 80)*10), 0, 0))
-        #     left_ram.set_color(RGBColor(0, 0, 0), start=1)
-        ### sleep is necessary to allow the sdk to set led values without creating a backup of
-        ###     color change requests which causes the delay mentioned earlier.
-        sleep(.2)
-finally:
-    sensors.cleanup()
+        #     right_ram.set_color(RGBColor(0, 0, 255), start=1)
+        #     right_ram.leds[0].set_color(RGBColor(0, 0, int((usage - 80)*10)))
+    except (ConnectionResetError, BrokenPipeError, TimeoutError) as e:
+        print(str(e) + " during main loop")
+        print("Trying to reconnect...")
+        while True:
+            try:
+                cli = OpenRGBClient()
+                break
+            except ConnectionRefusedError:
+                sleep(5)
+                continue
