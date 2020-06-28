@@ -7,20 +7,35 @@ import psutil
 from typing import Tuple
 
 
-# Getting this script ready to be run as a service. Waiting for the sdk to start.
-while True:
-    try:
-        cli = OpenRGBClient()
-        break
-    except ConnectionRefusedError:
-        sleep(5)
-        continue
+def initRGB():
+    # Getting this script ready to be run as a service. Waiting for the sdk to start.
+    while True:
+        try:
+            cli = OpenRGBClient()
+            break
+        except ConnectionRefusedError:
+            sleep(5)
+            continue
+    cooler = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
+    gpu = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
+    # right_ram, left_ram = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_DRAM)
+
+    # right_ram.clear()
+    # left_ram.clear()
+
+
+    # To make sure the devices are in the right mode, and to work around a problem
+    #   where the gpu won't change colors until switched out of static mode and
+    #   then back into static mode.
+    cooler.set_mode(0)  # Direct mode
+    gpu.set_mode(1)  # Anything would work, this is breathing in my setup
+    sleep(.1)
+    gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
+    return cooler, gpu
+
 
 nvmlInit()
 
-cooler = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
-gpu = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
-# right_ram, left_ram = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_DRAM)
 
 handle = nvmlDeviceGetHandleByIndex(0)
 
@@ -34,18 +49,7 @@ def temp_to_color(temp: int, min: int, max: int) -> Tuple[int, int]:
     elif temp >= max:
         return 255, 0
 
-
-# right_ram.clear()
-# left_ram.clear()
-
-
-# To make sure the devices are in the right mode, and to work around a problem
-#   where the gpu won't change colors until switched out of static mode and
-#   then back into static mode.
-cooler.set_mode(0)  # Direct mode
-gpu.set_mode(1)  # Anything would work, this is breathing in my setup
-sleep(.1)
-gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
+cooler, gpu = initRGB()
 
 while True:
     try:
@@ -84,10 +88,4 @@ while True:
     except (ConnectionResetError, BrokenPipeError, TimeoutError) as e:
         print(str(e) + " during main loop")
         print("Trying to reconnect...")
-        while True:
-            try:
-                cli = OpenRGBClient()
-                break
-            except ConnectionRefusedError:
-                sleep(5)
-                continue
+        cooler, gpu = initRGB()
