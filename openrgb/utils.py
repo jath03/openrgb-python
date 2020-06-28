@@ -436,7 +436,7 @@ class ControllerData(object):
                     zone.leds.append(led)
                     zone.colors.append(colors[x])
                 elif device_type == DeviceType.DEVICE_TYPE_KEYBOARD \
-                        and zone.type == ZoneType.ZONE_TYPE_MATRIX \
+                        and zone.zone_type == ZoneType.ZONE_TYPE_MATRIX \
                         and led.name.lower().startswith("key"):
                     zone.leds.append(led)
                     zone.colors.append(colors[x])

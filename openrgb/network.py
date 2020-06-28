@@ -83,8 +83,6 @@ class NetworkClient(object):
         p.start()
         p.join(3)
         if p.is_alive():
-            p.terminate()
-            p.join()
             raise TimeoutError("OpenRGB SDK Timed out responding to request for device data")
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
