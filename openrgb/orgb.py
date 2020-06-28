@@ -19,16 +19,18 @@ class LED(utils.RGBObject):
         self.device_id = device_id
         self.comms = network_client
 
-    def set_color(self, color: utils.RGBColor):
+    def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
         Sets the color of the LED
 
         :param color: the color to set the LED to
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize("i3bx"))
         buff = struct.pack("i", self.id) + color.pack()
         self.comms.sock.send(buff)
-        self.comms.requestDeviceData(self.device_id)
+        if not fast:
+            self.comms.requestDeviceData(self.device_id)
 
 
 class Zone(utils.RGBObject):
@@ -48,13 +50,14 @@ class Zone(utils.RGBObject):
         self.comms = network_client
         self.id = zone_id
 
-    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
+    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs color in the zone between start and end
 
         :param color: the color to set the leds to
         :param start: the first LED to change
         :param end: the last LED to change
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
@@ -62,15 +65,17 @@ class Zone(utils.RGBObject):
         buff = struct.pack("IH", self.id, end - start) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
-        self.comms.requestDeviceData(self.device_id)
+        if not fast:
+            self.comms.requestDeviceData(self.device_id)
 
-    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
+    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs colors in the zone between start and end
 
         :param colors: the list of colors, one per led
         :param start: the first LED to change
         :param end: the last LED to change
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
@@ -80,7 +85,8 @@ class Zone(utils.RGBObject):
         buff = struct.pack("IH", self.id, end - start) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
-        self.comms.requestDeviceData(self.device_id)
+        if not fast:
+            self.comms.requestDeviceData(self.device_id)
 
     def update_device_colors(self):
         pass
@@ -104,13 +110,14 @@ class Device(utils.RGBObject):
         self.id = device_id
         self.comms = network_client
 
-    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0):
+    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs color between start and end
 
         :param color: the color to set the leds to
         :param start: the first LED to change
         :param end: the last LED to change
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
@@ -122,15 +129,17 @@ class Device(utils.RGBObject):
         buff = struct.pack("H", end - start) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
-        self.comms.requestDeviceData(self.id)
+        if not fast:
+            self.comms.requestDeviceData(self.id)
 
-    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0):
+    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs colors between start and end
 
         :param colors: the list of colors, one per led
         :param start: the first LED to change
         :param end: the last LED to change
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
@@ -144,7 +153,8 @@ class Device(utils.RGBObject):
         buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.sock.send(buff)
-        self.comms.requestDeviceData(self.id)
+        if not fast:
+            self.comms.requestDeviceData(self.id)
 
     def set_mode(self, mode: Union[int, str, utils.ModeData]):
         '''
@@ -221,14 +231,15 @@ class OpenRGBClient(utils.RGBObject):
             else:
                 self.devices[device].__init__(data, device, self.comms)
 
-    def set_color(self, color: utils.RGBColor):
+    def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
         Sets the color of every device.
 
         :param color: the color to set the devices to
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         for device in self.devices:
-            device.set_color(color)
+            device.set_color(color, fast=fast)
 
     def get_devices_by_type(self, type: utils.DeviceType) -> List[Device]:
         '''

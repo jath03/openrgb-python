@@ -69,7 +69,7 @@ class NetworkClient(object):
                     self.sock.recv_into(data)
                     self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
                     self.state = Status.IDLE
-            sleep(.2)
+            sleep(.05)
 
     def requestDeviceData(self, device: int):
         '''
