@@ -414,7 +414,7 @@ class ControllerData(object):
         '''
         buff = struct.unpack("Ii", data[start:start + struct.calcsize("Ii")])
         start += struct.calcsize("Ii")
-        device_type = buff[1]
+        device_type = DeviceType(buff[1])
         start, name = parse_string(data, start)
         start, metadata = MetaData.unpack(data, start)
         buff = struct.unpack("=Hi", data[start:start + struct.calcsize("=Hi")])
@@ -431,10 +431,16 @@ class ControllerData(object):
         for zone in zones:
             zone.leds = []
             zone.colors = []
-            for x in range(len(leds)):
-                if zone.name in leds[x].name:
-                    zone.leds.append(leds[x])
+            for x, led in enumerate(leds):
+                if zone.name in led.name:
+                    zone.leds.append(led)
                     zone.colors.append(colors[x])
+                elif device_type == DeviceType.DEVICE_TYPE_KEYBOARD \
+                        and zone.type == ZoneType.ZONE_TYPE_MATRIX \
+                        and led.name.lower().startswith("key"):
+                    zone.leds.append(led)
+                    zone.colors.append(colors[x])
+
         # print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
         # print(metadata, sep="\n\t")
         # print("Mode Information:\n", "\tNumber of modes:", len(modes), "\n\tActive Mode:", active_mode, "\n\t", end="")
@@ -449,7 +455,7 @@ class ControllerData(object):
         return cls(
             name,
             metadata,
-            DeviceType(device_type),
+            device_type,
             leds,
             zones,
             modes,

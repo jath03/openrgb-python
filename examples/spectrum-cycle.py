@@ -14,4 +14,3 @@ client.off()
 while True:
     for x in range(360):
         client.set_color(RGBColor.fromHSV(x, 100, 100))
-        time.sleep(.05)

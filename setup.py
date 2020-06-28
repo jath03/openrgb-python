@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="openrgb-python",
-    version='0.0.8',
+    version='0.0.9',
     author="jath03",
     description="A python client for the OpenRGB SDK",
     long_description=long_description,
