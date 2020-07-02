@@ -44,7 +44,8 @@ class DeviceType(IntEnum):
     DEVICE_TYPE_MOUSE = 6
     DEVICE_TYPE_MOUSEMAT = 7
     DEVICE_TYPE_HEADSET = 8
-    DEVICE_TYPE_UNKNOWN = 9
+    DEVICE_TYPE_HEADSET_STAND = 9
+    DEVICE_TYPE_UNKNOWN = 10
 
 
 class ZoneType(IntEnum):
