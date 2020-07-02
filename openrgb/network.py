@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 import socket
 import struct
 import threading
@@ -6,6 +7,11 @@ from openrgb import utils
 from typing import Callable
 from time import sleep
 from enum import Enum
+
+if sys.platform.startswith("linux"):
+    NOSIGNAL = socket.MSG_NOSIGNAL
+elif sys.platform.startswith("win"):
+    NOSIGNAL = 0
 
 
 class Status(Enum):
@@ -38,7 +44,7 @@ class NetworkClient(object):
         # Sending the client name
         name = bytes(f"{name}\0", 'utf-8')
         self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
-        self.sock.send(name, socket.MSG_NOSIGNAL)
+        self.sock.send(name, NOSIGNAL)
 
         # Requesting the number of devices
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
@@ -93,7 +99,7 @@ class NetworkClient(object):
         :param packet_type: a utils.PacketType
         :param packet_size: the full size of the data to be send after the header
         '''
-        self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), socket.MSG_NOSIGNAL)
+        self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
 
     def timeout(self):
         while self.state == Status.WAITING:
