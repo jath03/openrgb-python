@@ -429,19 +429,11 @@ class ControllerData(object):
         start, zones = parse_list(ZoneData, data, start)
         start, leds = parse_list(LEDData, data, start)
         start, colors = parse_list(RGBColor, data, start)
+        i = 0
         for zone in zones:
-            zone.leds = []
-            zone.colors = []
-            for x, led in enumerate(leds):
-                if zone.name in led.name:
-                    zone.leds.append(led)
-                    zone.colors.append(colors[x])
-                elif device_type == DeviceType.DEVICE_TYPE_KEYBOARD \
-                        and zone.zone_type == ZoneType.ZONE_TYPE_MATRIX \
-                        and led.name.lower().startswith("key"):
-                    zone.leds.append(led)
-                    zone.colors.append(colors[x])
-
+            zone.leds = leds[i:i + zone.num_leds]
+            zone.colors = colors[i:i + zone.num_leds]
+            i += zone.num_leds
         # print("Device Information:\n", "\tDevice type:", device_type, "\n\t", end="")
         # print(metadata, sep="\n\t")
         # print("Mode Information:\n", "\tNumber of modes:", len(modes), "\n\tActive Mode:", active_mode, "\n\t", end="")
