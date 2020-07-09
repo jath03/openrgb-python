@@ -28,7 +28,7 @@ class LED(utils.RGBObject):
         '''
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize("i3bx"))
         buff = struct.pack("i", self.id) + color.pack()
-        self.comms.sock.send(buff)
+        self.comms.send_data(buff)
         if not fast:
             self.comms.requestDeviceData(self.device_id)
 
@@ -64,7 +64,7 @@ class Zone(utils.RGBObject):
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
         buff = struct.pack("IH", self.id, end - start) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
+        self.comms.send_data(buff)
         if not fast:
             self.comms.requestDeviceData(self.device_id)
 
@@ -84,7 +84,7 @@ class Zone(utils.RGBObject):
         self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
         buff = struct.pack("IH", self.id, end - start) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
+        self.comms.send_data(buff)
         if not fast:
             self.comms.requestDeviceData(self.device_id)
 
@@ -128,7 +128,7 @@ class Device(utils.RGBObject):
         )
         buff = struct.pack("H", end - start) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
+        self.comms.send_data(buff)
         if not fast:
             self.comms.requestDeviceData(self.id)
 
@@ -152,7 +152,7 @@ class Device(utils.RGBObject):
         )
         buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
-        self.comms.sock.send(buff)
+        self.comms.send_data(buff)
         if not fast:
             self.comms.requestDeviceData(self.id)
 
@@ -174,7 +174,7 @@ class Device(utils.RGBObject):
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE,
             len(data)
         )
-        self.comms.sock.send(data)
+        self.comms.send_data(data)
         self.active_mode = mode.id
         self.data.active_mode = self.active_mode
         if len(mode.colors) == len(self.colors):

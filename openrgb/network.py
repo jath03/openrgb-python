@@ -31,6 +31,7 @@ class NetworkClient(object):
         :param port: the port of the SDK server
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         '''
+        self.lock = threading.Lock()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((address, port))
 
@@ -44,7 +45,7 @@ class NetworkClient(object):
         # Sending the client name
         name = bytes(f"{name}\0", 'utf-8')
         self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
-        self.sock.send(name, NOSIGNAL)
+        self.send_data(name)
 
         # Requesting the number of devices
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
@@ -99,7 +100,13 @@ class NetworkClient(object):
         :param packet_type: a utils.PacketType
         :param packet_size: the full size of the data to be send after the header
         '''
+        if packet_size > 0:
+            self.lock.acquire()
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
+
+    def send_data(self, data: bytes):
+        self.sock.send(data, NOSIGNAL)
+        self.lock.release()
 
     def timeout(self):
         while self.state == Status.WAITING:
