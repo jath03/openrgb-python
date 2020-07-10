@@ -6,6 +6,7 @@ from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
 from os import environ
+from threading import Thread
 
 
 class LED(utils.RGBObject):
@@ -13,8 +14,10 @@ class LED(utils.RGBObject):
     A class to represent individual LEDs
     '''
 
-    def __init__(self, data: utils.LEDData, led_id: int, device_id: int, network_client: NetworkClient):
+    def __init__(self, data: utils.LEDData, color: utils.RGBColor, led_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
+        self.colors = [color]
+        self._colors = self.colors[:]
         self.id = led_id
         self.device_id = device_id
         self.comms = network_client
@@ -26,11 +29,15 @@ class LED(utils.RGBObject):
         :param color: the color to set the LED to
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
-        self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED, struct.calcsize("i3bx"))
+        self.comms.send_header(
+            self.device_id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED,
+            struct.calcsize("i3bx")
+        )
         buff = struct.pack("i", self.id) + color.pack()
         self.comms.send_data(buff)
         if not fast:
-            self.comms.requestDeviceData(self.device_id)
+            self.update()
 
 
 class Zone(utils.RGBObject):
@@ -41,11 +48,12 @@ class Zone(utils.RGBObject):
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.name = data.name
         self.type = data.zone_type
-        self.leds = [LED(data.leds[x], x, device_id, network_client) for x in range(len(data.leds))]
+        self.leds = [LED(data.leds[x], data.colors[x], x + data.start_idx, device_id, network_client) for x in range(len(data.leds))]
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map
         self.colors = data.colors
+        self._colors = self.colors[:]
         self.device_id = device_id
         self.comms = network_client
         self.id = zone_id
@@ -61,12 +69,18 @@ class Zone(utils.RGBObject):
         '''
         if end == 0:
             end = len(self.leds)
-        self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("IH", self.id, end - start) + (color.pack())*(end - start)
+        self.comms.send_header(
+            self.device_id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS,
+            struct.calcsize(f"IiH{3*(end)}b{(end)}x")
+        )
+        print(self.id)
+        print(start, end)
+        buff = struct.pack("iH", self.id, end) + b''.join((color.pack() for color in self._colors[:start])) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
-            self.comms.requestDeviceData(self.device_id)
+            self.update()
 
     def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
@@ -81,15 +95,16 @@ class Zone(utils.RGBObject):
             end = len(self.leds)
         if len(colors) != (end - start):
             raise IndexError("Number of colors doesn't match number of LEDs")
-        self.comms.send_header(self.device_id, utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS, struct.calcsize(f"IIH{3*(end - start)}b{(end - start)}x"))
-        buff = struct.pack("IH", self.id, end - start) + b''.join((color.pack() for color in colors))
+        self.comms.send_header(
+            self.device_id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS,
+            struct.calcsize(f"IIH{3*(end)}b{(end)}x")
+        )
+        buff = struct.pack("IH", self.id, end) + b''.join((color.pack() for color in self._colors[:start])) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
-            self.comms.requestDeviceData(self.device_id)
-
-    def update_device_colors(self):
-        pass
+            self.update()
 
 
 class Device(utils.RGBObject):
@@ -101,13 +116,15 @@ class Device(utils.RGBObject):
         self.name = data.name
         self.metadata = data.metadata
         self.type = data.device_type
-        self.leds = [LED(data.leds[x], x, device_id, network_client) for x in range(len(data.leds))]
+        self.leds = [LED(data.leds[x], data.colors[x], x, device_id, network_client) for x in range(len(data.leds))]
         self.zones = [Zone(data.zones[x], x, device_id, network_client) for x in range(len(data.zones))]
         self.modes = data.modes
         self.colors = data.colors
+        self._colors = self.colors[:]
         self.active_mode = data.active_mode
         self.data = data
         self.id = device_id
+        self.device_id = device_id
         self.comms = network_client
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
@@ -124,13 +141,13 @@ class Device(utils.RGBObject):
         self.comms.send_header(
             self.id,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x")
+            struct.calcsize(f"IH{3*(end)}b{(end)}x")
         )
-        buff = struct.pack("H", end - start) + (color.pack())*(end - start)
+        buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
-            self.comms.requestDeviceData(self.id)
+            self.update()
 
     def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
@@ -148,13 +165,13 @@ class Device(utils.RGBObject):
         self.comms.send_header(
             self.id,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(end - start)}b{(end - start)}x")
+            struct.calcsize(f"IH{3*(end)}b{(end)}x")
         )
-        buff = struct.pack("H", end - start) + b''.join((color.pack() for color in colors))
+        buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
-            self.comms.requestDeviceData(self.id)
+            self.update()
 
     def set_mode(self, mode: Union[int, str, utils.ModeData]):
         '''
@@ -190,7 +207,7 @@ class Device(utils.RGBObject):
         )
 
 
-class OpenRGBClient(utils.RGBObject):
+class OpenRGBClient(utils.RGBContainer):
     '''
     This is the only class you should ever need to instantiate.  It initializes
     the communication, gets the device information, sets the devices to the
@@ -299,3 +316,12 @@ class OpenRGBClient(utils.RGBObject):
         '''
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
+
+    def show(self, fast: bool = True, force: bool = False):
+        threads = []
+        for dev in self.devices:
+            threads.append(Thread(target=lambda dev: dev.show(fast, force), args=(dev,)))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()

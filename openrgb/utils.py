@@ -431,6 +431,7 @@ class ControllerData(object):
         start, colors = parse_list(RGBColor, data, start)
         i = 0
         for zone in zones:
+            zone.start_idx = i
             zone.leds = leds[i:i + zone.num_leds]
             zone.colors = colors[i:i + zone.num_leds]
             i += zone.num_leds
@@ -490,7 +491,7 @@ class Profile(object):
             return cls(controllers)
 
 
-class RGBObject(object):
+class RGBContainer(object):
     '''
     A parent class that includes a few generic functions that use the
     implementation provided by the children.
@@ -499,12 +500,14 @@ class RGBObject(object):
     def __init__(self, comms, name: str, device_id: int):
         self.comms = comms
         self.name = name
-        self.id = device_id
+        self.device_id = device_id
+        self.colors = []
+        self._colors = self.colors[:]
 
     def __repr__(self):
         return f"{type(self).__name__}(name={self.name}, id={self.id})"
 
-    def set_color(self, color: RGBColor, start: int = 0, end: int = 0):
+    def set_color(self, color: RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the color
 
@@ -523,3 +526,31 @@ class RGBObject(object):
         Same as RGBObject.clear
         '''
         self.clear()
+
+
+class RGBObject(RGBContainer):
+    def show(self, fast: bool = True, force: bool = False):
+        '''
+        Applies changes in the color attribute
+        '''
+        if len(self.colors) > len(self._colors):
+            raise ValueError(f"`self.colors` is longer than expected length `{len(self._colors)}`")
+        elif len(self.colors) < len(self._colors):
+            raise ValueError(f"`self.colors` is shorter than expected length `{len(self._colors)}`")
+        changed = [(i, color) for i, color in enumerate(self.colors) if color != self._colors[i]]
+        if force:
+            self.set_colors(self.colors, fast=fast)
+        elif len(changed) == 0:
+            return
+        elif len(changed) == 1 and not force:
+            self.leds[changed[0][0]].set_color(changed[0][1], fast=fast)
+        elif len(changed) > 1 and not force:
+            start, end = changed[0][0], changed[-1][0] + 1
+            colors = self.colors[start:end]
+            self.set_colors(colors, start, end, fast=fast)
+        self._colors = self.colors[:]
+        if not fast:
+            self.update()
+
+    def update(self):
+        self.comms.requestDeviceData(self.device_id)
