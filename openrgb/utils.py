@@ -98,7 +98,7 @@ def pack_string(string: str) -> bytearray:
     :returns: bytes ready to be used
     '''
     num = len(string)
-    return struct.pack(f"H{num}s", num + 1, string.encode('utf-8')) + b'\x00'
+    return struct.pack(f"H{num}s", num + 1, string.encode('ascii')) + b'\x00'
 
 
 def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List]:
@@ -523,7 +523,7 @@ class RGBContainer(object):
 
     def off(self):
         '''
-        Same as RGBObject.clear
+        Same as RGBContainer.clear
         '''
         self.clear()
 
@@ -539,15 +539,15 @@ class RGBObject(RGBContainer):
             raise ValueError(f"`self.colors` is shorter than expected length `{len(self._colors)}`")
         changed = [(i, color) for i, color in enumerate(self.colors) if color != self._colors[i]]
         if force:
-            self.set_colors(self.colors, fast=fast)
+            self.set_colors(self.colors, fast=True)
         elif len(changed) == 0:
             return
         elif len(changed) == 1 and not force:
-            self.leds[changed[0][0]].set_color(changed[0][1], fast=fast)
+            self.leds[changed[0][0]].set_color(changed[0][1], fast=True)
         elif len(changed) > 1 and not force:
             start, end = changed[0][0], changed[-1][0] + 1
             colors = self.colors[start:end]
-            self.set_colors(colors, start, end, fast=fast)
+            self.set_colors(colors, start, end, fast=True)
         self._colors = self.colors[:]
         if not fast:
             self.update()

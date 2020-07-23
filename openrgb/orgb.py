@@ -6,7 +6,6 @@ from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
 from os import environ
-from threading import Thread
 
 
 class LED(utils.RGBObject):
@@ -221,11 +220,11 @@ class OpenRGBClient(utils.RGBContainer):
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         :param custom: whether or not to set all your devices to custom control mode on initializtion
         '''
+        self.device_num = 0
         self.comms = NetworkClient(self._callback, address, port, name)
         self.address = address
         self.port = port
         self.name = name
-        self.device_num = 0
         while self.device_num == 0:
             sleep(.2)
         self.devices = [None for x in range(self.device_num)]
@@ -318,10 +317,5 @@ class OpenRGBClient(utils.RGBContainer):
             self.comms.requestDeviceData(x)
 
     def show(self, fast: bool = True, force: bool = False):
-        threads = []
         for dev in self.devices:
-            threads.append(Thread(target=lambda dev: dev.show(fast, force), args=(dev,)))
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+            dev.show(fast, force)
