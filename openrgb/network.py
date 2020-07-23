@@ -26,20 +26,42 @@ class NetworkClient(object):
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         '''
         self.lock = threading.Lock()
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        self.sock.connect((address, port))
-
         self.callback = update_callback
-
-        # Sending the client name
-        name = bytes(f"{name}\0", 'utf-8')
-        self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
-        self.send_data(name)
-
+        self.sock = None
+        self.address = address
+        self.port = port
+        self.name = name
+        self.start_connection()
         # Requesting the number of devices
         self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
         self.read()
+
+    def start_connection(self):
+        '''
+        Initializes a socket, connects to the SDK, and sets the client name
+
+        :param address: the ip address of the SDK server
+        :param port: the port of the SDK server
+        :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
+        '''
+        if self.sock is not None:
+            return
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.sock.connect((self.address, self.port))
+
+        # Sending the client name
+        name = bytes(f"{self.name}\0", 'utf-8')
+        self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
+        self.send_data(name)
+
+    def stop_connection(self):
+        '''
+        Closes the active socket
+        '''
+        if self.sock is not None:
+            self.sock.close()
+            self.sock = None
 
     def read(self):
         '''
@@ -47,6 +69,8 @@ class NetworkClient(object):
 
         :raises ConnectionError: when it loses connection to the SDK
         '''
+        if self.sock is None:
+            return
         header = bytearray(utils.HEADER_SIZE)
         self.sock.recv_into(header)
 
@@ -70,6 +94,8 @@ class NetworkClient(object):
 
         :param device: the id of the device to request data for
         '''
+        if self.sock is None:
+            return
         self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
         self.read()
 
@@ -81,14 +107,14 @@ class NetworkClient(object):
         :param packet_type: a utils.PacketType
         :param packet_size: the full size of the data to be send after the header
         '''
+        if self.sock is None:
+            return
         if packet_size > 0:
             self.lock.acquire()
         self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
 
     def send_data(self, data: bytes):
+        if self.sock is None:
+            return
         self.sock.send(data, NOSIGNAL)
         self.lock.release()
-
-    # def timeout(self):
-    #     while self.state == Status.WAITING:
-    #         sleep(.05)
