@@ -317,5 +317,19 @@ class OpenRGBClient(utils.RGBContainer):
             self.comms.requestDeviceData(x)
 
     def show(self, fast: bool = True, force: bool = False):
+        '''
+        Shows all devices
+
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
+        :param force: Sets all colors rather than trying to only set the ones that have been changed
+        '''
         for dev in self.devices:
             dev.show(fast, force)
+
+    def connect(self):
+        '''Connects to the OpenRGB SDK'''
+        self.comms.start_connection()
+
+    def disconnect(self):
+        '''Disconnects from the OpenRGB SDK'''
+        self.comms.stop_connection()

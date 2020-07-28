@@ -48,7 +48,11 @@ class NetworkClient(object):
             return
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.sock.connect((self.address, self.port))
+        try:
+            self.sock.connect((self.address, self.port))
+        except ConnectionRefusedError:
+            self.sock = None
+            raise
 
         # Sending the client name
         name = bytes(f"{self.name}\0", 'utf-8')
@@ -65,15 +69,22 @@ class NetworkClient(object):
 
     def read(self):
         '''
-        Listens for responses from the SDK from a separate thread
+        Reads responses from the SDK
 
-        :raises ConnectionError: when it loses connection to the SDK
+        :raises OpenRGBDisconnected: when it loses connection to the SDK
         '''
         if self.sock is None:
-            return
+            raise utils.OpenRGBDisconnected()
         header = bytearray(utils.HEADER_SIZE)
-        self.sock.recv_into(header)
+        try:
+            self.sock.recv_into(header)
+        except (ConnectionResetError, BrokenPipeError) as e:
+            self.stop_connection()
+            raise utils.OpenRGBDisconnected() from e
 
+        if header == '\x00'*utils.HEADER_SIZE:
+            self.stop_connection()
+            raise utils.OpenRGBDisconnected()
         # Unpacking the contents of the raw header struct into a list
         buff = list(struct.unpack('ccccIII', header))
         # print(buff[:4])
@@ -81,11 +92,19 @@ class NetworkClient(object):
             device_id, packet_type, packet_size = buff[4:]
             # print(device_id, packet_type, packet_size)
             if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
-                buff = struct.unpack("I", self.sock.recv(packet_size))
-                self.callback(device_id, packet_type, buff[0])
+                try:
+                    buff = struct.unpack("I", self.sock.recv(packet_size))
+                    self.callback(device_id, packet_type, buff[0])
+                except (ConnectionResetError, BrokenPipeError) as e:
+                    self.stop_connection()
+                    raise utils.OpenRGBDisconnected() from e
             elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                 data = bytearray(packet_size)
-                self.sock.recv_into(data)
+                try:
+                    self.sock.recv_into(data)
+                except (ConnectionResetError, BrokenPipeError) as e:
+                    self.stop_connection()
+                    raise utils.OpenRGBDisconnected() from e
                 self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
 
     def requestDeviceData(self, device: int):
@@ -95,7 +114,7 @@ class NetworkClient(object):
         :param device: the id of the device to request data for
         '''
         if self.sock is None:
-            return
+            raise utils.OpenRGBDisconnected()
         self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
         self.read()
 
@@ -103,18 +122,32 @@ class NetworkClient(object):
         '''
         Sends a header to the SDK
 
-        :param device_id: the id of the device to send a header for
-        :param packet_type: a utils.PacketType
-        :param packet_size: the full size of the data to be send after the header
+        :param device_id: The id of the device to send a header for
+        :param packet_type: A utils.PacketType
+        :param packet_size: The full size of the data to be send after the header
         '''
         if self.sock is None:
-            return
+            raise utils.OpenRGBDisconnected()
         if packet_size > 0:
             self.lock.acquire()
-        self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
+        try:
+            self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
+        except (ConnectionResetError, BrokenPipeError) as e:
+            self.stop_connection()
+            raise utils.OpenRGBDisconnected() from e
 
     def send_data(self, data: bytes):
+        '''
+        Sends data to the SDK
+
+        :param data: The data to send
+        '''
         if self.sock is None:
-            return
-        self.sock.send(data, NOSIGNAL)
-        self.lock.release()
+            raise utils.OpenRGBDisconnected()
+        try:
+            self.sock.send(data, NOSIGNAL)
+        except (ConnectionResetError, BrokenPipeError) as e:
+            self.stop_connection()
+            raise utils.OpenRGBDisconnected() from e
+        finally:
+            self.lock.release()

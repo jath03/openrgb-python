@@ -66,6 +66,10 @@ class PacketType(IntEnum):
     NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE = 1101
 
 
+class OpenRGBDisconnected(ConnectionError):
+    pass
+
+
 CT = TypeVar("CT", bound="RGBColor") # rgbColor Type
 MDT = TypeVar("MDT", bound="ModeData") # ModeData Type
 ZDT = TypeVar("ZDT", bound="ZoneData") # ZoneData Type
