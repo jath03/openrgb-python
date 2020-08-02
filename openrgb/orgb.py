@@ -105,7 +105,7 @@ class Zone(utils.RGBObject):
         if not fast:
             self.update()
 
-    def resize(self, size, fast: bool = False):
+    def resize(self, size: int, fast: bool = False):
         '''
         Resizes the zone. Required to control addressable leds in Direct mode.
 
