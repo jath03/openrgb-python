@@ -5,7 +5,7 @@
 
 A python client for the [OpenRGB SDK](https://gitlab.com/CalcProgrammer1/OpenRGB)
 
-I started this project because I wanted to be able to control the color of my lights based on temps. I tried to implement the features in the best (easiest to use) way possible.  
+I started this project because I wanted to be able to control the color of my lights based on temps. I tried to implement the features in the best (easiest to use) way possible.
 
 SDK Feature Support:
   - [x] Setting client name
@@ -15,7 +15,7 @@ SDK Feature Support:
   - [x] Setting color by led
   - [x] Setting mode
   - [x] Setting custom mode
-  - [ ] Resizing zones
+  - [x] Resizing zones
 
 Additional Features (Not part of the OpenRGB SDK):
   - [x] Loading profiles

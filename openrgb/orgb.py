@@ -105,6 +105,21 @@ class Zone(utils.RGBObject):
         if not fast:
             self.update()
 
+    def resize(self, size: int, fast: bool = False):
+        '''
+        Resizes the zone. Required to control addressable leds in Direct mode.
+
+        :param size: the number of leds in the zone
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
+        '''
+        self.comms.send_header(
+            self.device_id,
+            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_RESIZEZONE,
+            struct.calcsize("ii")
+        )
+        self.comms.send_data(struct.pack("ii", self.id, size))
+        if not fast:
+            self.update()
 
 class Device(utils.RGBObject):
     '''
