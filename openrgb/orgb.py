@@ -115,9 +115,9 @@ class Zone(utils.RGBObject):
         self.comms.send_header(
             self.device_id,
             utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_RESIZEZONE,
-            struct.calcsize("II")
+            struct.calcsize("ii")
         )
-        self.comms.send_data(struct.pack("II", self.id, size))
+        self.comms.send_data(struct.pack("ii", self.id, size))
         if not fast:
             self.update()
 
