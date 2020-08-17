@@ -205,12 +205,7 @@ class Device(utils.RGBObject):
             len(data)
         )
         self.comms.send_data(data)
-        self.active_mode = mode.id
-        self.data.active_mode = self.active_mode
-        if len(mode.colors) == len(self.colors):
-            self.colors = mode.colors
-            self.data.colors = self.colors
-        self.data.modes = self.modes
+        self.update()
 
     def set_custom_mode(self):
         self.comms.send_header(
