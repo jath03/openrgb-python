@@ -119,6 +119,7 @@ class Zone(utils.RGBObject):
         self.comms.send_data(struct.pack("ii", self.id, size))
         self.update()
 
+
 class Device(utils.RGBObject):
     '''
     A class to represent a RGB Device
@@ -222,11 +223,11 @@ class Device(utils.RGBObject):
 class OpenRGBClient(utils.RGBContainer):
     '''
     This is the only class you should ever need to instantiate.  It initializes
-    the communication, gets the device information, sets the devices to the
-    custom mode and creates Devices, Zones, and LEDs for you.
+    the communication, gets the device information, and creates Devices, Zones,
+    and LEDs for you.
     '''
 
-    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", custom: bool = True):
+    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python"):
         '''
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
@@ -244,9 +245,6 @@ class OpenRGBClient(utils.RGBContainer):
         self.get_device_info()
         while any((dev is None for dev in self.devices)):
             sleep(.2)
-        if custom:
-            for dev in self.devices:
-                dev.set_custom_mode()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
