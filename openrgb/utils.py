@@ -6,6 +6,8 @@ import colorsys
 
 HEADER_SIZE = 16
 
+CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError)
+
 
 class ModeFlags(IntFlag):
     MODE_FLAG_HAS_SPEED = (1 << 0)

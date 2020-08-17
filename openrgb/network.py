@@ -78,7 +78,7 @@ class NetworkClient(object):
         header = bytearray(utils.HEADER_SIZE)
         try:
             self.sock.recv_into(header)
-        except (ConnectionResetError, BrokenPipeError) as e:
+        except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
 
@@ -95,14 +95,14 @@ class NetworkClient(object):
                 try:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
                     self.callback(device_id, packet_type, buff[0])
-                except (ConnectionResetError, BrokenPipeError) as e:
+                except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
             elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
                 data = bytearray(packet_size)
                 try:
                     self.sock.recv_into(data)
-                except (ConnectionResetError, BrokenPipeError) as e:
+                except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
                 self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
@@ -132,7 +132,7 @@ class NetworkClient(object):
             self.lock.acquire()
         try:
             self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
-        except (ConnectionResetError, BrokenPipeError) as e:
+        except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
 
@@ -146,7 +146,7 @@ class NetworkClient(object):
             raise utils.OpenRGBDisconnected()
         try:
             self.sock.send(data, NOSIGNAL)
-        except (ConnectionResetError, BrokenPipeError) as e:
+        except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
         finally:
