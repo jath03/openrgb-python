@@ -238,7 +238,7 @@ class ModeData(object):
                 self.color_mode
             )
         )
-        data += pack_list(self.colors)
+        data += pack_list(self.colors if self.colors is not None else [])
         data = struct.pack("I", len(data) + struct.calcsize("I")) + data
         return data
 
@@ -266,13 +266,13 @@ class ModeData(object):
             buff[7] = None
         if ModeFlags.MODE_FLAG_HAS_SPEED not in buff[1]:
             buff[2], buff[3], buff[6] = None, None, None
-        if ModeFlags.MODE_FLAG_HAS_BRIGHTNESS not in buff[1]:
-            buff[4], buff[5] = None, None
-
-        buff[8] = ModeColors(buff[8])
-        for i in range(buff[-1]):
-            start, color = RGBColor.unpack(data, start)
-            colors.append(color)
+        if ModeFlags.MODE_FLAG_HAS_MODE_SPECIFIC_COLOR in buff[1]:
+            buff[8] = ModeColors(buff[8])
+            for i in range(buff[-1]):
+                start, color = RGBColor.unpack(data, start)
+                colors.append(color)
+        else:
+            colors, buff[4], buff[5] = None, None, None
         return start, cls(index, val, *buff[:9], colors)
 
 
