@@ -216,12 +216,31 @@ class ModeData(object):
     color_mode: ModeColors
     colors: List[RGBColor]
 
+    def validate(self):
+        try:
+            if ModeFlags.MODE_FLAG_HAS_SPEED in self.flags:
+                assert self.speed is not None
+                assert self.speed_min <= self.speed <= self.speed_max
+            if ModeFlags.MODE_FLAG_HAS_MODE_SPECIFIC_COLOR in self.flags:
+                assert self.colors_min <= len(self.colors) <= self.colors_max
+        except AssertionError as e:
+            raise ValueError("Mode validation failed.  Required values invalid or not present") from e
+
+        try:
+            if ModeFlags.MODE_FLAG_HAS_SPEED not in self.flags:
+                assert all((i is None for i in (self.speed_max, self.speed_min, self.speed)))
+            if ModeFlags.MODE_FLAG_HAS_MODE_SPECIFIC_COLOR not in self.flags:
+                assert all((i is None for i in (self.colors_max, self.colors_min, self.colors)))
+        except AssertionError as e:
+            raise ValueError("Mode validation failed.  Values are set that are not supported by this mode") from e
+
     def pack(self) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
+        self.validate()
         data = (
             struct.pack("i", self.id)
             + pack_string(self.name)
