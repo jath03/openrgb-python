@@ -30,7 +30,7 @@ class LED(utils.RGBObject):
         '''
         self.comms.send_header(
             self.device_id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATESINGLELED,
+            utils.PacketType.RGBCONTROLLER_UPDATESINGLELED,
             struct.calcsize("i3bx")
         )
         buff = struct.pack("i", self.id) + color.pack()
@@ -63,14 +63,14 @@ class Zone(utils.RGBObject):
 
         :param color: the color to set the leds to
         :param start: the first LED to change
-        :param end: the last LED to change
+        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
         self.comms.send_header(
             self.device_id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS,
+            utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
             struct.calcsize(f"IiH{3*(end)}b{(end)}x")
         )
         print(self.id)
@@ -87,7 +87,7 @@ class Zone(utils.RGBObject):
 
         :param colors: the list of colors, one per led
         :param start: the first LED to change
-        :param end: the last LED to change
+        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
@@ -96,7 +96,7 @@ class Zone(utils.RGBObject):
             raise IndexError("Number of colors doesn't match number of LEDs")
         self.comms.send_header(
             self.device_id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEZONELEDS,
+            utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
             struct.calcsize(f"IIH{3*(end)}b{(end)}x")
         )
         buff = struct.pack("IH", self.id, end) + b''.join((color.pack() for color in self._colors[:start])) + b''.join((color.pack() for color in colors))
@@ -113,7 +113,7 @@ class Zone(utils.RGBObject):
         '''
         self.comms.send_header(
             self.device_id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_RESIZEZONE,
+            utils.PacketType.RGBCONTROLLER_RESIZEZONE,
             struct.calcsize("ii")
         )
         self.comms.send_data(struct.pack("ii", self.id, size))
@@ -144,16 +144,16 @@ class Device(utils.RGBObject):
         '''
         Sets the LEDs color between start and end
 
-        :param color: the color to set the leds to
+        :param color: the color to set the LEDs to
         :param start: the first LED to change
-        :param end: the last LED to change
+        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
             end = len(self.leds)
         self.comms.send_header(
             self.id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
+            utils.PacketType.RGBCONTROLLER_UPDATELEDS,
             struct.calcsize(f"IH{3*(end)}b{(end)}x")
         )
         buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + (color.pack())*(end - start)
@@ -168,7 +168,7 @@ class Device(utils.RGBObject):
 
         :param colors: the list of colors, one per led
         :param start: the first LED to change
-        :param end: the last LED to change
+        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if end == 0:
@@ -177,7 +177,7 @@ class Device(utils.RGBObject):
             raise IndexError("Number of colors doesn't match number of LEDs")
         self.comms.send_header(
             self.id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATELEDS,
+            utils.PacketType.RGBCONTROLLER_UPDATELEDS,
             struct.calcsize(f"IH{3*(end)}b{(end)}x")
         )
         buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + b''.join((color.pack() for color in colors))
@@ -201,7 +201,7 @@ class Device(utils.RGBObject):
         data = mode.pack()
         self.comms.send_header(
             self.id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_UPDATEMODE,
+            utils.PacketType.RGBCONTROLLER_UPDATEMODE,
             len(data)
         )
         self.comms.send_data(data)
@@ -210,7 +210,7 @@ class Device(utils.RGBObject):
     def set_custom_mode(self):
         self.comms.send_header(
             self.id,
-            utils.PacketType.NET_PACKET_ID_RGBCONTROLLER_SETCUSTOMMODE,
+            utils.PacketType.RGBCONTROLLER_SETCUSTOMMODE,
             0
         )
 
@@ -244,10 +244,10 @@ class OpenRGBClient(utils.RGBContainer):
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
 
-    def _callback(self, device: int, type: int, data):
-        if type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+    def _callback(self, device: int, type: int, data: Union[int, utils.ControllerData]):
+        if type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
             self.device_num = data
-        elif type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+        elif type == utils.PacketType.REQUEST_CONTROLLER_DATA:
             if self.devices[device] is None:
                 self.devices[device] = Device(data, device, self.comms)
             else:

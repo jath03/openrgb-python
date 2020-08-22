@@ -13,7 +13,7 @@ elif sys.platform.startswith("win"):
     NOSIGNAL = 0
 
 
-class NetworkClient(object):
+class NetworkClient:
     '''
     A class for interfacing with the OpenRGB SDK
     '''
@@ -33,7 +33,7 @@ class NetworkClient(object):
         self.name = name
         self.start_connection()
         # Requesting the number of devices
-        self.send_header(0, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT, 0)
+        self.send_header(0, utils.PacketType.REQUEST_CONTROLLER_COUNT, 0)
         self.read()
 
     def start_connection(self):
@@ -56,7 +56,7 @@ class NetworkClient(object):
 
         # Sending the client name
         name = bytes(f"{self.name}\0", 'utf-8')
-        self.send_header(0, utils.PacketType.NET_PACKET_ID_SET_CLIENT_NAME, len(name))
+        self.send_header(0, utils.PacketType.SET_CLIENT_NAME, len(name))
         self.send_data(name)
 
     def stop_connection(self):
@@ -91,14 +91,14 @@ class NetworkClient(object):
         if buff[:4] == [b'O', b'R', b'G', b'B']:
             device_id, packet_type, packet_size = buff[4:]
             # print(device_id, packet_type, packet_size)
-            if packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_COUNT:
+            if packet_type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
                 try:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
                     self.callback(device_id, packet_type, buff[0])
                 except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
-            elif packet_type == utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA:
+            elif packet_type == utils.PacketType.REQUEST_CONTROLLER_DATA:
                 data = bytearray(packet_size)
                 try:
                     self.sock.recv_into(data)
@@ -115,7 +115,7 @@ class NetworkClient(object):
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
-        self.send_header(device, utils.PacketType.NET_PACKET_ID_REQUEST_CONTROLLER_DATA, 0)
+        self.send_header(device, utils.PacketType.REQUEST_CONTROLLER_DATA, 0)
         self.read()
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):

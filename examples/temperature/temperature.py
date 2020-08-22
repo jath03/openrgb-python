@@ -16,9 +16,15 @@ def initRGB():
         except ConnectionRefusedError:
             sleep(5)
             continue
-    cooler = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_COOLER)[0]
-    gpu = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_GPU)[0]
-    # right_ram, left_ram = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_DRAM)
+    try:
+        cooler = cli.get_devices_by_type(DeviceType.COOLER)[0]
+    except IndexError:
+        cooler = False
+    try:
+        gpu = cli.get_devices_by_type(DeviceType.GPU)[0]
+    except IndexError:
+        gpu = False
+    # right_ram, left_ram = cli.get_devices_by_type(DeviceType.DRAM)
 
     # right_ram.clear()
     # left_ram.clear()
@@ -27,17 +33,20 @@ def initRGB():
     # To make sure the devices are in the right mode, and to work around a problem
     #   where the gpu won't change colors until switched out of static mode and
     #   then back into static mode.
-    cooler.set_mode(0)  # Direct mode
-    gpu.set_mode(1)  # Anything would work, this is breathing in my setup
-    sleep(.1)
-    gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
-    return cooler, gpu
-
-
-nvmlInit()
-
-
-handle = nvmlDeviceGetHandleByIndex(0)
+    if cooler:
+        cooler.set_mode(0)  # Direct mode
+    if gpu:
+        gpu.set_mode(1)  # Anything would work, this is breathing in my setup
+        sleep(.1)
+        gpu.set_mode(0)  # Static mode.  My GPU doesn't have a direct mode.
+        try:
+            nvmlInit()
+            handle = nvmlDeviceGetHandleByIndex(0)
+        except:
+            gpu, handle = False, False
+    else:
+        handle = False
+    return cooler, gpu, handle
 
 
 def temp_to_color(temp: int, min: int, max: int) -> Tuple[int, int]:
@@ -49,20 +58,24 @@ def temp_to_color(temp: int, min: int, max: int) -> Tuple[int, int]:
     elif temp >= max:
         return 255, 0
 
-cooler, gpu = initRGB()
+
+cooler, gpu, handle = initRGB()
+
 
 while True:
     try:
-        ### CPU Temp
-        temp = psutil.sensors_temperatures()['k10temp'][-1].current
+        if cooler:
+            ### CPU Temp
+            temp = psutil.sensors_temperatures()['k10temp'][-1].current
 
-        red, blue = temp_to_color(temp, 45, 75)
-        cooler.set_color(RGBColor(red, 0, blue))
+            red, blue = temp_to_color(temp, 45, 75)
+            cooler.set_color(RGBColor(red, 0, blue))
 
-        ### GPU Temp
-        temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
-        red, blue = temp_to_color(temp, 35, 65)
-        gpu.set_color(RGBColor(red, 0, blue))
+        if gpu:
+            ### GPU Temp
+            temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+            red, blue = temp_to_color(temp, 35, 65)
+            gpu.set_color(RGBColor(red, 0, blue))
 
         ### RAM Usage
         ### Works fine
@@ -88,4 +101,4 @@ while True:
     except (ConnectionResetError, BrokenPipeError, TimeoutError) as e:
         print(str(e) + " during main loop")
         print("Trying to reconnect...")
-        cooler, gpu = initRGB()
+        cooler, gpu, handle = initRGB()

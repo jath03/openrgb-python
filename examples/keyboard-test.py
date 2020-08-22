@@ -5,8 +5,8 @@ from time import sleep
 
 cli = OpenRGBClient()
 
-keyboard = cli.get_devices_by_type(DeviceType.DEVICE_TYPE_KEYBOARD)[0]
-keys_zone = [z for z in keyboard.zones if z.type == ZoneType.ZONE_TYPE_MATRIX][0]
+keyboard = cli.get_devices_by_type(DeviceType.KEYBOARD)[0]
+keys_zone = [z for z in keyboard.zones if z.type == ZoneType.MATRIX][0]
 
 while True:
     for color in (RGBColor(255, 0, 0), RGBColor(0, 255, 0), RGBColor(0, 0, 255), RGBColor(0, 0, 0)):

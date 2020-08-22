@@ -51,7 +51,7 @@ client = OpenRGBClient()
 
 client.clear() # Turns everything off
 
-motherboard = client.get_devices_by_type(DeviceType.DEVICE_TYPE_MOTHERBOARD)[0]
+motherboard = client.get_devices_by_type(DeviceType.MOTHERBOARD)[0]
 
 motherboard.set_color(RGBColor(0, 255, 0))
 motherboard.zones[0].set_color(RGBColor(255, 0, 0))
