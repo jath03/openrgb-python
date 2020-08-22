@@ -156,12 +156,8 @@ class RGBColor:
         :returns: an RGBColor object
         '''
         size = struct.calcsize("BBBx")
-        if start == 0:
-            r, g, b = struct.unpack("BBBx", data[:size])
-            return size, cls(r, g, b)
-        else:
-            r, g, b = struct.unpack("BBBx", data[start:start + size])
-            return (start + size), cls(r, g, b)
+        r, g, b = struct.unpack("BBBx", data[start:start + size])
+        return (start + size), cls(r, g, b)
 
     @classmethod
     def fromHSV(cls, hue: int, saturation: int, value: int) -> CT:
@@ -519,18 +515,11 @@ class Profile:
             return cls(controllers)
 
 
-class RGBContainer(object):
+class RGBThing:
     '''
     A parent class that includes a few generic functions that use the
     implementation provided by the children.
     '''
-
-    def __init__(self, comms, name: str, device_id: int):
-        self.comms = comms
-        self.name = name
-        self.device_id = device_id
-        self.colors = []
-        self._colors = self.colors[:]
 
     def __repr__(self):
         return f"{type(self).__name__}(name={self.name}, id={self.id})"
@@ -556,8 +545,25 @@ class RGBContainer(object):
         self.clear()
 
 
-class RGBObject(RGBContainer):
-    def show(self, fast: bool = True, force: bool = False):
+class RGBObject(RGBThing):
+    def update(self):
+        '''
+        Gets the current status from the SDK server, ensuring a correct
+        internal state.
+        '''
+        self.comms.requestDeviceData(self.device_id)
+
+
+class RGBContainer(RGBThing):
+    def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+        '''
+        Sets mutliple colors
+
+        :param colors: A list of colors to set
+        '''
+        pass
+
+    def show(self, fast: bool = False, force: bool = False):
         '''
         Applies changes in the color attribute
         '''
@@ -570,15 +576,15 @@ class RGBObject(RGBContainer):
             self.set_colors(self.colors, fast=True)
         elif len(changed) == 0:
             return
-        elif len(changed) == 1 and not force:
+        elif len(changed) == 1:
             self.leds[changed[0][0]].set_color(changed[0][1], fast=True)
-        elif len(changed) > 1 and not force:
+        elif len(changed) > 1:
             start, end = changed[0][0], changed[-1][0] + 1
-            colors = self.colors[start:end]
-            self.set_colors(colors, start, end, fast=True)
+            colors = [color for i, color in changed]
+            if all(color == colors[0] for color in colors):
+                self.set_color(colors[0], start, end, fast=True)
+            else:
+                self.set_colors(colors, start, end, fast=True)
         self._colors = self.colors[:]
         if not fast:
             self.update()
-
-    def update(self):
-        self.comms.requestDeviceData(self.device_id)
