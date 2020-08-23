@@ -73,8 +73,6 @@ class Zone(utils.RGBObject, utils.RGBContainer):
             utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
             struct.calcsize(f"IiH{3*(end)}b{(end)}x")
         )
-        print(self.id)
-        print(start, end)
         buff = struct.pack("iH", self.id, end) + b''.join((color.pack() for color in self._colors[:start])) + (color.pack())*(end - start)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
