@@ -39,7 +39,7 @@ class LED(utils.RGBObject):
             self.update()
 
 
-class Zone(utils.RGBObject, utils.RGBContainer):
+class Zone(utils.RGBContainer):
     '''
     A class to represent a zone
     '''
@@ -118,7 +118,7 @@ class Zone(utils.RGBObject, utils.RGBContainer):
         self.update()
 
 
-class Device(utils.RGBObject, utils.RGBContainer):
+class Device(utils.RGBContainer):
     '''
     A class to represent a RGB Device
     '''
@@ -213,7 +213,7 @@ class Device(utils.RGBObject, utils.RGBContainer):
         )
 
 
-class OpenRGBClient(utils.RGBThing):
+class OpenRGBClient(utils.RGBObject):
     '''
     This is the only class you should ever need to instantiate.  It initializes
     the communication, gets the device information, and creates Devices, Zones,

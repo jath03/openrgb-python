@@ -515,7 +515,7 @@ class Profile:
             return cls(controllers)
 
 
-class RGBThing:
+class RGBObject:
     '''
     A parent class that includes a few generic functions that use the
     implementation provided by the children.
@@ -544,8 +544,6 @@ class RGBThing:
         '''
         self.clear()
 
-
-class RGBObject(RGBThing):
     def update(self):
         '''
         Gets the current status from the SDK server, ensuring a correct
@@ -554,7 +552,12 @@ class RGBObject(RGBThing):
         self.comms.requestDeviceData(self.device_id)
 
 
-class RGBContainer(RGBThing):
+class RGBContainer(RGBObject):
+    '''
+    A parent class for RGBObjects that can control more than one LED like the
+    :any:`Device` class or the :any:`Zone` class.
+    '''
+    
     def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets mutliple colors
