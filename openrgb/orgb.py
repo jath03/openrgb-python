@@ -232,10 +232,7 @@ class OpenRGBClient(utils.RGBObject):
         self.address = address
         self.port = port
         self.name = name
-        while self.device_num == 0:
-            sleep(.2)
-        self.devices = [None for x in range(self.device_num)]
-        self.get_device_info()
+        self.comms.requestDeviceNum()
         while any((dev is None for dev in self.devices)):
             sleep(.2)
 
@@ -244,12 +241,18 @@ class OpenRGBClient(utils.RGBObject):
 
     def _callback(self, device: int, type: int, data: Union[int, utils.ControllerData]):
         if type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
-            self.device_num = data
+            if data != self.device_num or data != len(self.devices):
+                self.device_num = data
+                self.devices = [None for x in range(self.device_num)]
+                self.update()
         elif type == utils.PacketType.REQUEST_CONTROLLER_DATA:
-            if self.devices[device] is None:
-                self.devices[device] = Device(data, device, self.comms)
-            else:
-                self.devices[device].__init__(data, device, self.comms)
+            try:
+                if self.devices[device] is None:
+                    self.devices[device] = Device(data, device, self.comms)
+                else:
+                    self.devices[device].__init__(data, device, self.comms)
+            except IndexError:
+                self.comms.requestDeviceNum()
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
@@ -311,7 +314,7 @@ class OpenRGBClient(utils.RGBObject):
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
             f.write(utils.Profile(self.devices).pack())
 
-    def get_device_info(self):
+    def update(self):
         '''
         Gets the current state of your devices from the SDK server.  Useful if
         you change something from the gui or another SDK client and need to

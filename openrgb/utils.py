@@ -557,7 +557,7 @@ class RGBContainer(RGBObject):
     A parent class for RGBObjects that can control more than one LED like the
     :any:`Device` class or the :any:`Zone` class.
     '''
-    
+
     def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets mutliple colors
@@ -584,10 +584,7 @@ class RGBContainer(RGBObject):
         elif len(changed) > 1:
             start, end = changed[0][0], changed[-1][0] + 1
             colors = [color for i, color in changed]
-            if all(color == colors[0] for color in colors):
-                self.set_color(colors[0], start, end, fast=True)
-            else:
-                self.set_colors(colors, start, end, fast=True)
+            self.set_colors(colors, start, end, fast=True)
         self._colors = self.colors[:]
         if not fast:
             self.update()

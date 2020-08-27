@@ -32,9 +32,6 @@ class NetworkClient:
         self.port = port
         self.name = name
         self.start_connection()
-        # Requesting the number of devices
-        self.send_header(0, utils.PacketType.REQUEST_CONTROLLER_COUNT, 0)
-        self.read()
 
     def start_connection(self):
         '''
@@ -116,6 +113,13 @@ class NetworkClient:
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
         self.send_header(device, utils.PacketType.REQUEST_CONTROLLER_DATA, 0)
+        self.read()
+
+    def requestDeviceNum(self):
+        '''
+        Requesting the number of devices from the SDK server
+        '''
+        self.send_header(0, utils.PacketType.REQUEST_CONTROLLER_COUNT, 0)
         self.read()
 
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
