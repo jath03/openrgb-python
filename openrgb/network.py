@@ -128,7 +128,7 @@ class NetworkClient:
 
         :param device_id: The id of the device to send a header for
         :param packet_type: A utils.PacketType
-        :param packet_size: The full size of the data to be send after the header
+        :param packet_size: The full size of the data to be sent after the header
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()

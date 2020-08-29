@@ -1,7 +1,4 @@
-# OpenRGB-Python
-
-
-[![Documentation Status](https://readthedocs.org/projects/openrgb-python/badge/?version=latest)](https://openrgb-python.readthedocs.io/en/latest/?badge=latest)
+# Introduction
 
 OpenRGB-Python is a client for the [OpenRGB SDK](https://gitlab.com/CalcProgrammer1/OpenRGB#openrgb-sdk),
 a manufacturer-independent, cross-platform way to control your RGB devices.
@@ -24,7 +21,7 @@ Additional Features (Not part of the OpenRGB SDK):
   - [x] Loading profiles
   - [x] Saving profiles
 
-# Installation
+## Installation
 
 requires python >= 3.7
 
@@ -42,30 +39,4 @@ For a more stable package:
 Arch Linux:
 `yay -S python-openrgb`
 
-Thanks to @GabMus for the AUR packages
-
-# Usage
-
-```python
-from openrgb import OpenRGBClient
-from openrgb.utils import RGBColor, DeviceType
-
-client = OpenRGBClient()
-
-client.clear() # Turns everything off
-
-motherboard = client.get_devices_by_type(DeviceType.MOTHERBOARD)[0]
-
-motherboard.set_color(RGBColor(0, 255, 0))
-motherboard.zones[0].set_color(RGBColor(255, 0, 0))
-motherboard.zones[1].leds[0].set_color(RGBColor.fromHSV(0, 100, 100))
-motherboard.set_mode("breathing")
-client.save_profile("profile1")
-```
-
-# Documentation
-
-https://openrgb-python.readthedocs.io/en/latest/
-
-
-For an alternative python implementation, check out [B Horn](https://github.com/bahorn)'s [OpenRGB-PyClient](https://github.com/bahorn/OpenRGB-PyClient)
+Thanks to [@GabMus](https://github.com/GabMus) for the AUR packages

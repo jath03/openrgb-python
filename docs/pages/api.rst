@@ -1,5 +1,5 @@
-openrgb package
-===============
+API
+===
 
 Module contents
 ---------------
@@ -14,7 +14,7 @@ Submodules
 ----------
 
 openrgb.network module
-----------------------
+++++++++++++++++++++++
 
 .. automodule:: openrgb.network
    :members:
@@ -22,7 +22,7 @@ openrgb.network module
    :show-inheritance:
 
 openrgb.orgb module
--------------------
++++++++++++++++++++
 
 .. automodule:: openrgb.orgb
    :members:
@@ -30,7 +30,7 @@ openrgb.orgb module
    :show-inheritance:
 
 openrgb.utils module
---------------------
+++++++++++++++++++++
 
 .. automodule:: openrgb.utils
    :members:

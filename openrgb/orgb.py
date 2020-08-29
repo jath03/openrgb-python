@@ -59,9 +59,9 @@ class Zone(utils.RGBContainer):
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
-        Sets the LEDs color in the zone between start and end
+        Sets the LEDs' color in the zone between start and end
 
-        :param color: the color to set the leds to
+        :param color: the color to set the LEDs to
         :param start: the first LED to change
         :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
@@ -81,9 +81,9 @@ class Zone(utils.RGBContainer):
 
     def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
-        Sets the LEDs colors in the zone between start and end
+        Sets the LEDs' colors in the zone between start and end
 
-        :param colors: the list of colors, one per led
+        :param colors: the list of colors, one per LED
         :param start: the first LED to change
         :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
@@ -120,7 +120,7 @@ class Zone(utils.RGBContainer):
 
 class Device(utils.RGBContainer):
     '''
-    A class to represent a RGB Device
+    A class to represent an RGB Device
     '''
 
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
@@ -140,9 +140,9 @@ class Device(utils.RGBContainer):
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
-        Sets the LEDs color between start and end
+        Sets the LEDs' color between start and end
 
-        :param color: the color to set the LEDs to
+        :param color: the color to set the LED(s) to
         :param start: the first LED to change
         :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
@@ -162,9 +162,9 @@ class Device(utils.RGBContainer):
 
     def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
-        Sets the LEDs colors between start and end
+        Sets the LEDs' colors between start and end
 
-        :param colors: the list of colors, one per led
+        :param colors: the list of colors, one per LED
         :param start: the first LED to change
         :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
@@ -215,9 +215,9 @@ class Device(utils.RGBContainer):
 
 class OpenRGBClient(utils.RGBObject):
     '''
-    This is the only class you should ever need to instantiate.  It initializes
-    the communication, gets the device information, and creates Devices, Zones,
-    and LEDs for you.
+    This is the only class you should need to manually instantiate.  It
+    initializes the communication, gets the device information, and creates
+    Devices, Zones, and LEDs for you.
     '''
 
     def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python"):
@@ -225,7 +225,6 @@ class OpenRGBClient(utils.RGBObject):
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
-        :param custom: whether or not to set all your devices to custom control mode on initializtion
         '''
         self.device_num = 0
         self.comms = NetworkClient(self._callback, address, port, name)
@@ -316,9 +315,9 @@ class OpenRGBClient(utils.RGBObject):
 
     def update(self):
         '''
-        Gets the current state of your devices from the SDK server.  Useful if
-        you change something from the gui or another SDK client and need to
-        sync up the changes.
+        Gets the current state of your devices from the SDK server, which is
+        useful if you change something from the gui or another SDK client and
+        need to sync up the changes.
         '''
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
