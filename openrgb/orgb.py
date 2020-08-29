@@ -243,7 +243,8 @@ class OpenRGBClient(utils.RGBObject):
             if data != self.device_num or data != len(self.devices):
                 self.device_num = data
                 self.devices = [None for x in range(self.device_num)]
-                self.update()
+                for x in range(self.device_num):
+                    self.comms.requestDeviceData(x)
         elif type == utils.PacketType.REQUEST_CONTROLLER_DATA:
             try:
                 if self.devices[device] is None:
@@ -319,6 +320,7 @@ class OpenRGBClient(utils.RGBObject):
         useful if you change something from the gui or another SDK client and
         need to sync up the changes.
         '''
+        self.comms.requestDeviceNum()
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
 
