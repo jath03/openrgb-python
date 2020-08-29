@@ -1,5 +1,6 @@
+from __future__ import annotations
 from enum import IntEnum, IntFlag
-from typing import List, TypeVar, Tuple, BinaryIO
+from typing import List, Tuple, BinaryIO
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -72,15 +73,6 @@ class OpenRGBDisconnected(ConnectionError):
     pass
 
 
-CT = TypeVar("CT", bound="RGBColor") # rgbColor Type
-MDT = TypeVar("MDT", bound="ModeData") # ModeData Type
-ZDT = TypeVar("ZDT", bound="ZoneData") # ZoneData Type
-LDT = TypeVar("LDT", bound="LEDData") # LedData Type
-MEDT = TypeVar("MEDT", bound="MetaData") # MEtaData Type
-CDT = TypeVar("CDT", bound="ControllerData") # ControllerData Type
-PT = TypeVar("PT", bound="Profile") # Profile Type
-
-
 def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
     '''
     Parses a string based on a size.
@@ -149,7 +141,7 @@ class RGBColor:
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, CT]:
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, RGBColor]:
         '''
         Unpacks an RGBColor object from bytes
 
@@ -184,7 +176,7 @@ class LEDData:
         )
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, LDT]:
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, LEDData]:
         '''
         Creates a new LEDData object from raw bytes
 
@@ -261,7 +253,7 @@ class ModeData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, index: int = 0) -> Tuple[int, MDT]:
+    def unpack(cls, data: bytearray, start: int = 0, index: int = 0) -> Tuple[int, ModeData]:
         '''
         Creates a new ModeData object from raw bytes
 
@@ -339,7 +331,7 @@ class ZoneData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, ZDT]:
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, ZoneData]:
         '''
         Unpacks the raw data into a ZoneData object
 
@@ -384,7 +376,7 @@ class MetaData:
         )
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, MEDT]:
+    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, MetaData]:
         '''
         Unpacks the raw data into a MetaData object
 
@@ -430,7 +422,7 @@ class ControllerData:
         return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0) -> CDT:
+    def unpack(cls, data: bytearray, start: int = 0) -> ControllerData:
         '''
         Unpacks the raw bytes received from the SDK into a ControllerData dataclass
 
@@ -497,7 +489,7 @@ class Profile:
         return data
 
     @classmethod
-    def unpack(cls, profile: BinaryIO) -> PT:
+    def unpack(cls, profile: BinaryIO) -> Profile:
         header = profile.read(16 + struct.calcsize("I"))
         if struct.unpack("16s", header[:16])[0] != b"OPENRGB_PROFILE\x00":
             raise ValueError("The file is not an OpenRGB profile")
