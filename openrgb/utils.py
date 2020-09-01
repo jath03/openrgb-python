@@ -575,7 +575,7 @@ class RGBContainer(RGBObject):
             self.leds[changed[0][0]].set_color(changed[0][1], fast=True)
         elif len(changed) > 1:
             start, end = changed[0][0], changed[-1][0] + 1
-            colors = [color for i, color in changed]
+            colors = self.colors[start:end]
             self.set_colors(colors, start, end, fast=True)
         self._colors = self.colors[:]
         if not fast:
