@@ -324,7 +324,7 @@ class OpenRGBClient(utils.RGBObject):
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
 
-    def show(self, fast: bool = True, force: bool = False):
+    def show(self, fast: bool = False, force: bool = False):
         '''
         Shows all devices
 
@@ -332,7 +332,9 @@ class OpenRGBClient(utils.RGBObject):
         :param force: Sets all colors rather than trying to only set the ones that have been changed
         '''
         for dev in self.devices:
-            dev.show(fast, force)
+            dev.show(True, force)
+        if not fast:
+            self.update()
 
     def connect(self):
         '''Connects to the OpenRGB SDK'''
