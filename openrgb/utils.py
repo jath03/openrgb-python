@@ -431,7 +431,10 @@ class ControllerData:
         '''
         buff = struct.unpack("Ii", data[start:start + struct.calcsize("Ii")])
         start += struct.calcsize("Ii")
-        device_type = DeviceType(buff[1])
+        try:
+            device_type = DeviceType(buff[1])
+        except ValueError:
+            device_type = DeviceType.UNKNOWN
         start, name = parse_string(data, start)
         start, metadata = MetaData.unpack(data, start)
         buff = struct.unpack("=Hi", data[start:start + struct.calcsize("=Hi")])
