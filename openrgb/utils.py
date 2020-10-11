@@ -48,7 +48,8 @@ class DeviceType(IntEnum):
     MOUSEMAT = 7
     HEADSET = 8
     HEADSET_STAND = 9
-    UNKNOWN = 10
+    GAMEPAD = 10
+    UNKNOWN = 11
 
 
 class ZoneType(IntEnum):
