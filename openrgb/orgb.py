@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import struct
 from openrgb import utils
-from typing import List, Union
+from typing import List, Union, Optional
 from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
@@ -238,7 +238,7 @@ class OpenRGBClient(utils.RGBObject):
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
 
-    def _callback(self, device: int, type: int, data: Union[int, utils.ControllerData]):
+    def _callback(self, device: int, type: int, data: Optional[Union[int, utils.ControllerData]]):
         if type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
             if data != self.device_num or data != len(self.devices):
                 self.device_num = data
@@ -253,6 +253,9 @@ class OpenRGBClient(utils.RGBObject):
                     self.devices[device].__init__(data, device, self.comms)
             except IndexError:
                 self.comms.requestDeviceNum()
+        elif type == utils.PacketType.DEVICE_LIST_UPDATED:
+            self.device_num = 0
+            self.comms.requestDeviceNum()
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''

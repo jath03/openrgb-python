@@ -103,6 +103,9 @@ class NetworkClient:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
                 self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
+            elif packet_type == utils.PacketType.DEVICE_LIST_UPDATED:
+                assert device_id == 0 and packet_size == 0
+                self.callback(device_id, packet_type, 0)
 
     def requestDeviceData(self, device: int):
         '''
