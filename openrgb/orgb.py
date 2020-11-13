@@ -227,6 +227,7 @@ class OpenRGBClient(utils.RGBObject):
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         '''
         self.device_num = 0
+        self.devices = []
         self.comms = NetworkClient(self._callback, address, port, name)
         self.address = address
         self.port = port
