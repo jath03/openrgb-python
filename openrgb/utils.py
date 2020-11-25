@@ -279,11 +279,10 @@ class ModeData:
         if ModeFlags.HAS_SPEED not in buff[1]:
             buff[2], buff[3], buff[6] = None, None, None
         buff[8] = ModeColors(buff[8])
-        if ModeFlags.HAS_MODE_SPECIFIC_COLOR in buff[1]:
-            for i in range(buff[-1]):
-                start, color = RGBColor.unpack(data, start)
-                colors.append(color)
-        else:
+        for i in range(buff[-1]):
+            start, color = RGBColor.unpack(data, start)
+            colors.append(color)
+        if buff[-1] == 0:
             colors, buff[4], buff[5] = None, None, None
         return start, cls(index, val, *buff[:9], colors)
 
