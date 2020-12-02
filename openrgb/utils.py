@@ -136,7 +136,7 @@ class RGBColor:
     green: int
     blue: int
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int = 0) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 

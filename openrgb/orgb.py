@@ -196,7 +196,7 @@ class Device(utils.RGBContainer):
             mode = self.modes[mode]
         elif type(mode) == str:
             mode = next((m for m in self.modes if m.name.lower() == mode.lower()))
-        data = mode.pack()
+        data = mode.pack(self.comms._protocol_version)
         self.comms.send_header(
             self.id,
             utils.PacketType.RGBCONTROLLER_UPDATEMODE,
@@ -312,11 +312,11 @@ class OpenRGBClient(utils.RGBObject):
         :param name: the name of the profile to save
         :param directory: what directory to save the profile in.  Defaults to HOME/.config/OpenRGB
         '''
-        self.get_device_info()
+        self.update()
         if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
-            f.write(utils.Profile([dev.data for dev in self.devices]).pack(0))
+            f.write(utils.Profile([dev.data for dev in self.devices]).pack())
 
     def update(self):
         '''
