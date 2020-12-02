@@ -220,7 +220,7 @@ class OpenRGBClient(utils.RGBObject):
     Devices, Zones, and LEDs for you.
     '''
 
-    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python"):
+    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: int = None):
         '''
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
@@ -228,7 +228,7 @@ class OpenRGBClient(utils.RGBObject):
         '''
         self.device_num = 0
         self.devices = []
-        self.comms = NetworkClient(self._callback, address, port, name)
+        self.comms = NetworkClient(self._callback, address, port, name, protocol_version)
         self.address = address
         self.port = port
         self.name = name
@@ -347,3 +347,16 @@ class OpenRGBClient(utils.RGBObject):
     def disconnect(self):
         '''Disconnects from the OpenRGB SDK'''
         self.comms.stop_connection()
+
+    @property
+    def protocol_version(self):
+        '''The protocol version of the connected SDK server'''
+        return self.comms.protocol_version
+
+    @protocol_version.setter
+    def protocol_version(self, version: int):
+        '''Sets the procol version of the connected SDK server'''
+        if version <= self.comms.max_protocol_version:
+            self.comms.protocol_version = version
+        else:
+            raise ValueError(f"version {version} is greater than maximum supported version {self.comms.max_protocol_version}")

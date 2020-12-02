@@ -61,6 +61,7 @@ class ZoneType(IntEnum):
 class PacketType(IntEnum):
     REQUEST_CONTROLLER_COUNT = 0
     REQUEST_CONTROLLER_DATA = 1
+    REQUEST_PROTOCOL_VERSION = 40
     SET_CLIENT_NAME = 50
     DEVICE_LIST_UPDATED = 100
     RGBCONTROLLER_RESIZEZONE = 1000
@@ -101,7 +102,7 @@ def pack_string(string: str) -> bytearray:
     return struct.pack(f"H{num}s", num + 1, string.encode('ascii')) + b'\x00'
 
 
-def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List]:
+def parse_list(kind: object, data: bytearray, version: int, start: int = 0) -> Tuple[int, List]:
     '''
     Parses a list of objects and returns them
 
@@ -113,19 +114,19 @@ def parse_list(kind: object, data: bytearray, start: int = 0) -> Tuple[int, List
     start += struct.calcsize("H")
     things = []
     for x in range(num):
-        start, thing = kind.unpack(data, start, x)
+        start, thing = kind.unpack(data, version, start, x)
         things.append(thing)
     return start, things
 
 
-def pack_list(things: list) -> bytearray:
+def pack_list(things: list, version: int) -> bytearray:
     '''
     Packs a list of things using the things' .pack() methods
 
     :param things: a list of things to pack
     :returns: bytes ready to be used
     '''
-    return bytes(struct.pack("H", len(things))) + b''.join(thing.pack() for thing in things)
+    return bytes(struct.pack("H", len(things))) + b''.join(thing.pack(version) for thing in things)
 
 
 @dataclass
@@ -134,7 +135,7 @@ class RGBColor:
     green: int
     blue: int
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -143,7 +144,7 @@ class RGBColor:
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, RGBColor]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, RGBColor]:
         '''
         Unpacks an RGBColor object from bytes
 
@@ -166,7 +167,7 @@ class LEDData:
     name: str
     value: int
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -178,7 +179,7 @@ class LEDData:
         )
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, LEDData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, LEDData]:
         '''
         Creates a new LEDData object from raw bytes
 
@@ -227,7 +228,7 @@ class ModeData:
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Values are set that are not supported by this mode") from e
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -255,7 +256,7 @@ class ModeData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, index: int = 0) -> Tuple[int, ModeData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, index: int = 0) -> Tuple[int, ModeData]:
         '''
         Creates a new ModeData object from raw bytes
 
@@ -280,7 +281,7 @@ class ModeData:
             buff[2], buff[3], buff[6] = None, None, None
         buff[8] = ModeColors(buff[8])
         for i in range(buff[-1]):
-            start, color = RGBColor.unpack(data, start)
+            start, color = RGBColor.unpack(data, version, start)
             colors.append(color)
         if buff[-1] == 0:
             colors, buff[4], buff[5] = None, None, None
@@ -301,7 +302,7 @@ class ZoneData:
     colors: List[RGBColor] = None
     start_idx: int = None
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -332,7 +333,7 @@ class ZoneData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, ZoneData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, ZoneData]:
         '''
         Unpacks the raw data into a ZoneData object
 
@@ -358,26 +359,30 @@ class ZoneData:
 
 @dataclass
 class MetaData:
+    vendor: str
     description: str
     version: str
     serial: str
     location: str
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
-        return (
-            pack_string(self.description)
+        buff = (
+            + pack_string(self.description)
             + pack_string(self.version)
             + pack_string(self.serial)
             + pack_string(self.location)
         )
+        if version >= 1:
+            buff = pack_string(self.vendor) + buff
+        return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0, *args) -> Tuple[int, MetaData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, MetaData]:
         '''
         Unpacks the raw data into a MetaData object
 
@@ -385,9 +390,11 @@ class MetaData:
         :param start: What place in the data object to start
         '''
         buff = []
-        for x in range(4):
+        for x in range(5 if version >= 1 else 4):
             start, val = parse_string(data, start)
             buff.append(val)
+        if version < 1:
+            buff = [None] + buff
         return start, cls(*buff)
 
 
@@ -402,7 +409,7 @@ class ControllerData:
     colors: List[RGBColor]
     active_mode: int
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int) -> bytearray:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -411,19 +418,19 @@ class ControllerData:
         buff = (
             struct.pack("i", self.device_type)
             + pack_string(self.name)
-            + self.metadata.pack()
+            + self.metadata.pack(version)
             + struct.pack("H", len(self.modes))
             + struct.pack("i", self.active_mode)
-            + b''.join(mode.pack()[struct.calcsize("Ii"):] for mode in self.modes)
-            + pack_list(self.zones)
-            + pack_list(self.leds)
-            + pack_list(self.colors)
+            + b''.join(mode.pack(version)[struct.calcsize("Ii"):] for mode in self.modes)
+            + pack_list(self.zones, version)
+            + pack_list(self.leds, version)
+            + pack_list(self.colors, version)
         )
         buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
         return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, start: int = 0) -> ControllerData:
+    def unpack(cls, data: bytearray, version: int, start: int = 0) -> ControllerData:
         '''
         Unpacks the raw bytes received from the SDK into a ControllerData dataclass
 
@@ -437,18 +444,18 @@ class ControllerData:
         except ValueError:
             device_type = DeviceType.UNKNOWN
         start, name = parse_string(data, start)
-        start, metadata = MetaData.unpack(data, start)
+        start, metadata = MetaData.unpack(data, version, start)
         buff = struct.unpack("=Hi", data[start:start + struct.calcsize("=Hi")])
         start += struct.calcsize("=Hi")
         num_modes = buff[0]
         active_mode = buff[-1]
         modes = []
         for x in range(num_modes):
-            start, mode = ModeData.unpack(data, start, x)
+            start, mode = ModeData.unpack(data, version, start, x)
             modes.append(mode)
-        start, zones = parse_list(ZoneData, data, start)
-        start, leds = parse_list(LEDData, data, start)
-        start, colors = parse_list(RGBColor, data, start)
+        start, zones = parse_list(ZoneData, data, version, start)
+        start, leds = parse_list(LEDData, data, version, start)
+        start, colors = parse_list(RGBColor, data, version, start)
         i = 0
         for zone in zones:
             zone.start_idx = i
@@ -485,7 +492,7 @@ class Profile:
     '''
     controllers: List[ControllerData]
 
-    def pack(self) -> bytearray:
+    def pack(self, version: int = 0) -> bytearray:
         data = bytearray()
         data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
         for dev in self.controllers:

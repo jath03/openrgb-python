@@ -6,6 +6,7 @@ import threading
 from openrgb import utils
 from typing import Callable
 
+OPENRGB_PROTOCOL_VERSION = 1
 
 if sys.platform.startswith("linux"):
     NOSIGNAL = socket.MSG_NOSIGNAL
@@ -18,7 +19,7 @@ class NetworkClient:
     A class for interfacing with the OpenRGB SDK
     '''
 
-    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python"):
+    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: int = None):
         '''
         :param update_callback: the function to call when data is received
         :param address: the ip address of the SDK server
@@ -28,6 +29,13 @@ class NetworkClient:
         self.lock = threading.Lock()
         self.callback = update_callback
         self.sock = None
+        self.max_protocol_version = OPENRGB_PROTOCOL_VERSION
+        if protocol_version is not None:
+            if protocol_version > self.max_protocol_version:
+                raise ValueError(f"version {protocol_version} is greater than maximum supported version {self.max_protocol_version}")
+            self._protocol_version = protocol_version
+        else:
+            self._protocol_version = OPENRGB_PROTOCOL_VERSION
         self.address = address
         self.port = port
         self.name = name
@@ -51,6 +59,16 @@ class NetworkClient:
             self.sock = None
             raise
 
+        # Checking server protocol version
+        self.sock.settimeout(1.0)
+        self.send_header(0, utils.PacketType.REQUEST_PROTOCOL_VERSION, struct.calcsize('I'))
+        self.send_data(struct.pack("I", self._protocol_version), False)
+        try:
+            self.read()
+        except socket.timeout:
+            self._protocol_version = 0
+            self.lock.release()
+        self.sock.settimeout(None)
         # Sending the client name
         name = bytes(f"{self.name}\0", 'utf-8')
         self.send_header(0, utils.PacketType.SET_CLIENT_NAME, len(name))
@@ -110,11 +128,20 @@ class NetworkClient:
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
-                self.callback(device_id, packet_type, utils.ControllerData.unpack(data))
+                self.callback(device_id, packet_type, utils.ControllerData.unpack(data, self._protocol_version))
             elif packet_type == utils.PacketType.DEVICE_LIST_UPDATED:
                 assert device_id == 0 and packet_size == 0
                 self.read()
                 self.callback(device_id, packet_type, 0)
+            elif packet_type == utils.PacketType.REQUEST_PROTOCOL_VERSION:
+                try:
+                    self.max_protocol_version = min(struct.unpack("I", self.sock.recv(packet_size))[0], OPENRGB_PROTOCOL_VERSION)
+                    self._protocol_version = min(self.max_protocol_version, self._protocol_version)
+                except utils.CONNECTION_ERRORS as e:
+                    self.stop_connection()
+                    raise utils.OpenRGBDisconnected() from e
+                finally:
+                    self.lock.release()
 
     def requestDeviceData(self, device: int):
         '''
@@ -124,7 +151,8 @@ class NetworkClient:
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
-        self.send_header(device, utils.PacketType.REQUEST_CONTROLLER_DATA, 0)
+        self.send_header(device, utils.PacketType.REQUEST_CONTROLLER_DATA, struct.calcsize('I'))
+        self.send_data(struct.pack("I", self._protocol_version), False)
         self.read()
 
     def requestDeviceNum(self):
