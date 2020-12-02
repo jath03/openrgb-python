@@ -497,7 +497,7 @@ class Profile:
         data = bytearray()
         data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
         for dev in self.controllers:
-            data += dev.data.pack()
+            data += dev.data.pack(0)
         return data
 
     @classmethod
@@ -514,7 +514,7 @@ class Profile:
                     break
                 size = struct.unpack("I", d)[0]
                 profile.seek(profile.tell() - struct.calcsize("I"))
-                new_data = ControllerData.unpack(profile.read(size))
+                new_data = ControllerData.unpack(profile.read(size), 0)
                 controllers.append(new_data)
             return cls(controllers)
 
