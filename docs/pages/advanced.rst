@@ -112,3 +112,29 @@ you try to call :any:`OpenRGBClient.connect()` or try to initialize an
 the client loses connection to the SDK server after the initial connection, then
 trying to interact with the SDK server will cause an :any:`OpenRGBDisconnected`
 error.
+
+Offline Profile Editing
+-----------------------
+
+Binary OpenRGB profiles, with the '.orp' suffix, can be loaded directly into
+OpenRGB-Python as a :any:`Profile` object if you want to inspect or edit an
+existing profile.
+
+.. note::
+
+    This doesn't require a connection the OpenRGB SDK server
+
+.. code-block:: python
+
+    from openrgb.utils import Profile
+
+    # Loading a Profile object
+    with open('/path/to/profile.orp', rb) as f:
+        my_profile = Profile.unpack(f)
+
+    # Modifying the profile
+    my_profile.controllers[0].colors[0] = RGBColor(255, 0, 0)
+
+    # Saving a profile
+    with open('/path/to/new_profile.orp', 'wb') as f:
+        f.write(my_profile.pack())

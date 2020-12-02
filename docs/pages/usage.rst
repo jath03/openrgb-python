@@ -21,8 +21,8 @@ few more options.
 This will connect to an OpenRGB SDK server at :code:`192.168.1.111:8000` with
 the name :code:`My client!`.
 
-Getting Devices
----------------
+Selecting Devices
+-----------------
 On initialization, the :any:`OpenRGBClient` will create :any:`Device` objects
 for all of your OpenRGB Devices.  You can list these out by :code:`print`-ing
 :code:`cli.devices`.  Devices can be accessed through their index in this list,
@@ -120,3 +120,35 @@ resize it at some point.
 .. code-block:: python
 
     mobo.zones[0].resize(35)
+
+Using Profiles
+--------------
+Once you have set your RGB exactly how you like it, you probably want to save
+the state into a profile.  With OpenRGB-Python, this is pretty simple.  This
+function will save the current state of you lights to a profile.
+
+.. code-block:: python
+
+    cli.save_profile('perfection')
+
+This will save a profile called perfection.orp in OpenRGB's config directory by
+default, so you can load the profile directly from OpenRGB's profile list.
+
+Loading profiles in OpenRGB-Python is equally as simple as saving them.  This
+function will set your lights to the same as they were when they were saved.
+It can load profiles saved from OpenRGB itself, or OpenRGB-Python.
+
+.. code-block:: python
+
+    cli.load_profile('perfection')
+
+.. warning::
+
+    I only know where OpenRGB's config directory is on linux and I haven't
+    tested saving profiles on windows.  The default directory that
+    OpenRGB-Python saves profiles is :code:`~/.config/OpenRGB`. If you know
+    where OpenRGB's config directory is on windows and how to reliably find it
+    from python, please submit a pr or come talk to me on OpenRGB's discord
+    server.  In the mean time, you will probably have to manually specify the
+    directory where you want to save or load a profile from using the
+    :code:`directory` argument.
