@@ -360,3 +360,11 @@ class OpenRGBClient(utils.RGBObject):
             self.comms.protocol_version = version
         else:
             raise ValueError(f"version {version} is greater than maximum supported version {self.comms.max_protocol_version}")
+
+    @property
+    def ee_devices(self):
+        '''
+        A subset of the device list that only includes devices with a direct
+        control mode.  These devices are suitable to use with an effects engine.
+        '''
+        return [dev for dev in self.devices for mode in dev.modes if mode.name.lower() == 'direct']
