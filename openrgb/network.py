@@ -152,7 +152,7 @@ class NetworkClient:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
 
-    def send_data(self, data: bytes):
+    def send_data(self, data: bytes, release_lock: bool = True):
         '''
         Sends data to the SDK
 
@@ -166,4 +166,5 @@ class NetworkClient:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
         finally:
-            self.lock.release()
+            if release_lock:
+                self.lock.release()
