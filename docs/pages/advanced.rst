@@ -115,7 +115,6 @@ error.
 
 Offline Profile Editing
 -----------------------
-
 Binary OpenRGB profiles, with the '.orp' suffix, can be loaded directly into
 OpenRGB-Python as a :any:`Profile` object if you want to inspect or edit an
 existing profile.
@@ -138,3 +137,24 @@ existing profile.
     # Saving a profile
     with open('/path/to/new_profile.orp', 'wb') as f:
         f.write(my_profile.pack())
+
+SDK Protocol Version
+--------------------
+OpenRGB implemented a versioning system for the SDK protocol, to allow
+new features to be added to the SDK protocol without breaking existing SDK
+apps.  The versioning system is bidirectionally backwards compatible, so older
+SDK apps will work with the newest version of OpenRGB and newer SDK apps will
+work with older versions of OpenRGB.  OpenRGB-Python should stay pretty
+up-to-date with the latest SDK protocol versions, but if, for whatever reason,
+you need to use a specific protocol version, this is how.
+
+.. code-block:: python
+
+    # To change the protocol version at initialization
+    cli = OpenRGBClient(protocol_version=0)
+
+    # To change the protocol version during usage
+    cli.protocol_version = 1
+
+In both cases, a :any:`ValueError` will be thrown if the protocol version is
+above the highest version supported by both the server and the client.
