@@ -351,13 +351,13 @@ class OpenRGBClient(utils.RGBObject):
     @property
     def protocol_version(self):
         '''The protocol version of the connected SDK server'''
-        return self.comms.protocol_version
+        return self.comms._protocol_version
 
     @protocol_version.setter
     def protocol_version(self, version: int):
         '''Sets the procol version of the connected SDK server'''
         if version <= self.comms.max_protocol_version:
-            self.comms.protocol_version = version
+            self.comms._protocol_version = version
         else:
             raise ValueError(f"version {version} is greater than maximum supported version {self.comms.max_protocol_version}")
 
