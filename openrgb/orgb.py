@@ -316,7 +316,7 @@ class OpenRGBClient(utils.RGBObject):
         if directory == '':
             directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
         with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
-            f.write(utils.Profile(self.devices).pack())
+            f.write(utils.Profile([dev.data for dev in self.devices]).pack(0))
 
     def update(self):
         '''

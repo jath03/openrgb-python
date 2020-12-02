@@ -252,7 +252,7 @@ class ModeData:
                 self.color_mode
             )
         )
-        data += pack_list(self.colors if self.colors is not None else [])
+        data += pack_list(self.colors if self.colors is not None else [], version)
         data = struct.pack("I", len(data) + struct.calcsize("I")) + data
         return data
 
@@ -373,7 +373,7 @@ class MetaData:
         :returns: raw data ready to be sent or saved
         '''
         buff = (
-            + pack_string(self.description)
+            pack_string(self.description)
             + pack_string(self.version)
             + pack_string(self.serial)
             + pack_string(self.location)
@@ -493,11 +493,11 @@ class Profile:
     '''
     controllers: List[ControllerData]
 
-    def pack(self, version: int = 0) -> bytearray:
+    def pack(self) -> bytearray:
         data = bytearray()
         data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
         for dev in self.controllers:
-            data += dev.data.pack(0)
+            data += dev.pack(0)
         return data
 
     @classmethod
