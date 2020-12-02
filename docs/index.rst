@@ -12,7 +12,7 @@ Welcome to OpenRGB-Python's documentation!
 
    pages/intro
    pages/usage
-   pages/alternate
+   pages/effects
    pages/advanced
    pages/api
 

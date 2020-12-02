@@ -55,7 +55,7 @@ For creating custom effects, you often want to have your lights refreshing
 quickly.  Optimizing openrgb-python for speed isn't very hard if you know what
 you are doing.  The best way to maximize speed is to minimize OpenRGB SDK calls.
 The most user-friendly way to do this is to use the
-:doc:`alternative control</pages/alternate>` method, but it is possible to do
+:doc:`effects control flow</pages/effects>`, but it is possible to do
 accomplish the same things with the other functions.  One common argument that
 will help is the :code:`fast` argument.  In any of the color-changing functions
 (:code:`set_color`, :code:`set_colors`, :code:`show`), if you pass in

@@ -54,7 +54,7 @@ RGB values or HSV values.
 .. note::
 
     Already familiar with other LED control libraries like fastLED or adafruit's
-    neopixel library?  The :doc:`alternative control</pages/alternate>` method
+    neopixel library?  The :doc:`effects control flow</pages/effects>`
     was made to be used in a similar way.  Try it out and see which one you like
     better!
 
@@ -88,7 +88,7 @@ motherboard has 8 LEDs, and sets them in a red, blue, red, blue... pattern.
     While these methods can be used for things like custom effects, it requires
     a little more effort to make it work quickly enough (see
     :doc:`optimizing for speed</pages/advanced>`). The
-    :doc:`alternative control</pages/alternate>` method was made to be easier
+    :doc:`effects control flow</pages/effects>` was made to be easier
     to use for effects that require fast changes.
 
 
