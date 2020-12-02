@@ -148,6 +148,12 @@ work with older versions of OpenRGB.  OpenRGB-Python should stay pretty
 up-to-date with the latest SDK protocol versions, but if, for whatever reason,
 you need to use a specific protocol version, this is how.
 
+.. note::
+
+    When using a newer SDK client that supports versioning with an older version
+    of the OpenRGB server, there will be a 1 second delay on initialization
+    because a timeout has to be exceeded.  
+
 .. code-block:: python
 
     # To change the protocol version at initialization
