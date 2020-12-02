@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum, IntFlag
-from typing import List, Tuple, BinaryIO
+from typing import BinaryIO
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -77,7 +77,7 @@ class OpenRGBDisconnected(ConnectionError):
     pass
 
 
-def parse_string(data: bytes, start: int = 0) -> Tuple[int, str]:
+def parse_string(data: bytes, start: int = 0) -> tuple[int, str]:
     '''
     Parses a string based on a size.
 
@@ -103,7 +103,7 @@ def pack_string(string: str) -> bytearray:
     return struct.pack(f"H{num}s", num + 1, string.encode('ascii')) + b'\x00'
 
 
-def parse_list(kind: object, data: bytearray, version: int, start: int = 0) -> Tuple[int, List]:
+def parse_list(kind: object, data: bytearray, version: int, start: int = 0) -> tuple[int, list]:
     '''
     Parses a list of objects and returns them
 
@@ -145,7 +145,7 @@ class RGBColor:
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, RGBColor]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, RGBColor]:
         '''
         Unpacks an RGBColor object from bytes
 
@@ -180,7 +180,7 @@ class LEDData:
         )
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, LEDData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, LEDData]:
         '''
         Creates a new LEDData object from raw bytes
 
@@ -206,7 +206,7 @@ class ModeData:
     speed: int
     direction: ModeDirections
     color_mode: ModeColors
-    colors: List[RGBColor]
+    colors: list[RGBColor]
 
     def validate(self):
         '''
@@ -257,7 +257,7 @@ class ModeData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, index: int = 0) -> Tuple[int, ModeData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, index: int = 0) -> tuple[int, ModeData]:
         '''
         Creates a new ModeData object from raw bytes
 
@@ -298,9 +298,9 @@ class ZoneData:
     num_leds: int
     mat_height: int
     mat_width: int
-    matrix_map: List[list] = None
-    leds: List[LEDData] = None
-    colors: List[RGBColor] = None
+    matrix_map: list[list] = None
+    leds: list[LEDData] = None
+    colors: list[RGBColor] = None
     start_idx: int = None
 
     def pack(self, version: int) -> bytearray:
@@ -334,7 +334,7 @@ class ZoneData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, ZoneData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, ZoneData]:
         '''
         Unpacks the raw data into a ZoneData object
 
@@ -383,7 +383,7 @@ class MetaData:
         return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Tuple[int, MetaData]:
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, MetaData]:
         '''
         Unpacks the raw data into a MetaData object
 
@@ -404,10 +404,10 @@ class ControllerData:
     name: str
     metadata: MetaData
     device_type: DeviceType
-    leds: List[LEDData]
-    zones: List[ZoneData]
-    modes: List[ModeData]
-    colors: List[RGBColor]
+    leds: list[LEDData]
+    zones: list[ZoneData]
+    modes: list[ModeData]
+    colors: list[RGBColor]
     active_mode: int
 
     def pack(self, version: int) -> bytearray:
@@ -491,7 +491,7 @@ class Profile:
     '''
     A dataclass to load, store, and pack the data found in an OpenRGB profile file.
     '''
-    controllers: List[ControllerData]
+    controllers: list[ControllerData]
 
     def pack(self) -> bytearray:
         data = bytearray()
@@ -562,7 +562,7 @@ class RGBContainer(RGBObject):
     :any:`Device` class or the :any:`Zone` class.
     '''
 
-    def set_colors(self, colors: List[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+    def set_colors(self, colors: list[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets mutliple colors
 

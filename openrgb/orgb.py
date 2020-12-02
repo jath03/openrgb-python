@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+from __future__ import annotations
 import struct
 from openrgb import utils
-from typing import List, Union, Optional
+from typing import Union, Optional
 from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
@@ -79,7 +79,7 @@ class Zone(utils.RGBContainer):
         if not fast:
             self.update()
 
-    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+    def set_colors(self, colors: list[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs' colors in the zone between start and end
 
@@ -160,7 +160,7 @@ class Device(utils.RGBContainer):
         if not fast:
             self.update()
 
-    def set_colors(self, colors: List[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+    def set_colors(self, colors: list[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
         '''
         Sets the LEDs' colors between start and end
 
@@ -268,7 +268,7 @@ class OpenRGBClient(utils.RGBObject):
         for device in self.devices:
             device.set_color(color, fast=fast)
 
-    def get_devices_by_type(self, type: utils.DeviceType) -> List[Device]:
+    def get_devices_by_type(self, type: utils.DeviceType) -> list[Device]:
         '''
         Gets a list of devices that are the same type as requested
 
