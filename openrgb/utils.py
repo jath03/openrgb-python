@@ -162,6 +162,13 @@ class RGBColor:
         '''
         return cls(*(round(i * 255) for i in colorsys.hsv_to_rgb(hue/360, saturation/100, value/100)))
 
+    @classmethod
+    def fromHEX(cls, hex: str) -> RGBColor:
+        '''
+        Creates a RGBColor object from a hex color string
+        '''
+        return cls(*(int(hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)))
+
 
 @dataclass
 class LEDData:

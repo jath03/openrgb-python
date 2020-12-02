@@ -43,13 +43,14 @@ by the devices' metadata, name, or any other property.
 Setting colors
 --------------
 Colors are handled by the :any:`RGBColor` object.  It can be initialized from
-RGB values or HSV values.
+RGB, HSV, or even HEX color values.
 
 .. code-block:: python
 
     from openrgb.utils import RGBColor
     red = RGBColor(255, 0, 0)
     blue = RGBColor.fromHSV(240, 100, 100)
+    green = RGBColor.fromHEX('#00ff00') # The '#' symbol isn't necessary, it's just commonly attached to HEX colors
 
 .. note::
 
@@ -124,8 +125,8 @@ resize it at some point.
 Using Profiles
 --------------
 Once you have set your RGB exactly how you like it, you probably want to save
-the state into a profile.  With OpenRGB-Python, this is pretty simple.  This
-function will save the current state of you lights to a profile.
+the state into a profile.  This function will save the current state of you
+lights to a profile.
 
 .. code-block:: python
 
