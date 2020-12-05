@@ -1,21 +1,25 @@
+#!/usr/bin/env python3
+# This Example grabs perfmon counters (Processor Performance %) as an indicator of CPU Boost
+# and updates via direct ARGB to a led strip
+# Sample uses Aorus Elite Wifi with Lian Li Lancool II Casae on the "Digital Bottom" 3-pin ARGB output
+
 from openrgb import OpenRGBClient
 from openrgb.utils import DeviceType
 from openrgb.utils import RGBColor
-import wmi
+#import wmi
 import winstats
-
 
 maxtemp = 100
 mintemp = 30
-maxperf = 120
-minperf = 85
+maxperf = 125
+minperf = 95
 
 ledstripsize=19
 
 red = RGBColor(255, 0, 0)
 blue=RGBColor(0,0,255)
 zonenumber=0
-myColorList = red, blue, red, blue, red, blue, red, red, blue, blue, red, blue, red, blue
+#myColorList = red, blue, red, blue, red, blue, red, red, blue, blue, red, blue, red, blue
 
 cli = OpenRGBClient()
 print(cli)
@@ -40,5 +44,3 @@ while True:
             myLeds[i].set_color(red)
         else:
             myLeds[i].set_color(blue)
-
-

@@ -1,0 +1,4 @@
+py3nvml
+psutil
+wmi
+winstats
