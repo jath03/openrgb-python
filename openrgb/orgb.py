@@ -14,12 +14,15 @@ class LED(utils.RGBObject):
     '''
 
     def __init__(self, data: utils.LEDData, color: utils.RGBColor, led_id: int, device_id: int, network_client: NetworkClient):
-        self.name = data.name
-        self.colors = [color]
-        self._colors = self.colors[:]
         self.id = led_id
         self.device_id = device_id
         self.comms = network_client
+        self._update(data, color)
+
+    def _update(self, data: utils.LEDData, color: utils.RGBColor):
+        self.name = data.name
+        self.colors = [color]
+        self._colors = self.colors[:]
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
@@ -45,17 +48,27 @@ class Zone(utils.RGBContainer):
     '''
 
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
+        self.leds = [None for led in data.leds]
+        self.device_id = device_id
+        self.comms = network_client
+        self.id = zone_id
+        self._update(data)
+
+    def _update(self, data: utils.ZoneData):
         self.name = data.name
         self.type = data.zone_type
-        self.leds = [LED(data.leds[x], data.colors[x], x + data.start_idx, device_id, network_client) for x in range(len(data.leds))]
+        if len(self.leds) != len(data.leds):
+            self.leds = [None for led in data.leds]
+        for x in range(len(data.leds)):
+            if self.leds[x] is None:
+                self.leds[x] = LED(data.leds[x], data.colors[x], x, self.device_id, self.comms)
+            else:
+                self.leds[x]._update(data.leds[x], data.colors[x])
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map
         self.colors = data.colors
         self._colors = self.colors[:]
-        self.device_id = device_id
-        self.comms = network_client
-        self.id = zone_id
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
@@ -124,19 +137,34 @@ class Device(utils.RGBContainer):
     '''
 
     def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
+        self.leds = [None for i in data.leds]
+        self.zones = [None for i in data.zones]
+        self.id = device_id
+        self.device_id = device_id
+        self.comms = network_client
+        self._update(data)
+
+    def _update(self, data: utils.ControllerData):
         self.name = data.name
         self.metadata = data.metadata
         self.type = data.device_type
-        self.leds = [LED(data.leds[x], data.colors[x], x, device_id, network_client) for x in range(len(data.leds))]
-        self.zones = [Zone(data.zones[x], x, device_id, network_client) for x in range(len(data.zones))]
+        if len(self.leds) != len(data.leds):
+            self.leds = [None for i in data.leds]
+        for x in range(len(data.leds)):
+            if self.leds[x] is None:
+                self.leds[x] = LED(data.leds[x], data.colors[x], x, self.device_id, self.comms)
+            else:
+                self.leds[x]._update(data.leds[x], data.colors[x])
+        for x in range(len(data.zones)):
+            if self.zones[x] is None:
+                self.zones[x] = Zone(data.zones[x], x, self.device_id, self.comms)
+            else:
+                self.zones[x]._update(data.zones[x])
         self.modes = data.modes
         self.colors = data.colors
         self._colors = self.colors[:]
         self.active_mode = data.active_mode
         self.data = data
-        self.id = device_id
-        self.device_id = device_id
-        self.comms = network_client
 
     def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
         '''
@@ -251,7 +279,7 @@ class OpenRGBClient(utils.RGBObject):
                 if self.devices[device] is None:
                     self.devices[device] = Device(data, device, self.comms)
                 else:
-                    self.devices[device].__init__(data, device, self.comms)
+                    self.devices[device]._update(data)
             except IndexError:
                 self.comms.requestDeviceNum()
         elif type == utils.PacketType.DEVICE_LIST_UPDATED:
