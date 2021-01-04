@@ -223,7 +223,10 @@ class Device(utils.RGBContainer):
         elif type(mode) == int:
             mode = self.modes[mode]
         elif type(mode) == str:
-            mode = next((m for m in self.modes if m.name.lower() == mode.lower()))
+            try:
+                mode = next((m for m in self.modes if m.name.lower() == mode.lower()))
+            except StopIteration as e:
+                raise ValueError(f"Mode `{mode}` not found for device `{self.name}`") from e
         data = mode.pack(self.comms._protocol_version)
         self.comms.send_header(
             self.id,
