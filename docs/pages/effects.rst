@@ -36,7 +36,7 @@ for setting a device to a rainbow color.
     cli = OpenRGBClient()
 
     # dividing the color spectrum by number of LEDs
-    step = int(len(cli.ee_devices[0].colors)/360)
+    step = int(len(360/cli.ee_devices[0].colors))
     for i, hue in enumerate(range(0, 360, step)):
         cli.ee_devices[0].colors[i] = RGBColor.fromHSV(hue, 100, 100)
     cli.ee_devices[0].show()
