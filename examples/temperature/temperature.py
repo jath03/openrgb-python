@@ -11,6 +11,7 @@ def initRGB():
     # Getting this script ready to be run as a service. Waiting for the sdk to start.
     while True:
         try:
+            print("trying to connect")
             cli = OpenRGBClient()
             break
         except ConnectionRefusedError:
@@ -76,7 +77,7 @@ while True:
             temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
             red, blue = temp_to_color(temp, 35, 65)
             gpu.set_color(RGBColor(red, 0, blue))
-
+        sleep(.05)
         ### RAM Usage
         ### Works fine
         # usage = psutil.virtual_memory().percent
