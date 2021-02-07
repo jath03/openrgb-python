@@ -307,6 +307,14 @@ class OpenRGBClient(utils.RGBObject):
         '''
         return [device for device in self.devices if device.type == type]
 
+    def get_device_by_name(self, name: str) -> Device:
+        '''
+        Gets the device matching the requested name
+        
+        :param name: the name of the device you want to get
+        '''
+        return self.devices[[device.name for device in self.devices].index(name)]
+    
     def load_profile(self, name: str, directory: str = ''):
         '''
         Loads an OpenRGB profile file
