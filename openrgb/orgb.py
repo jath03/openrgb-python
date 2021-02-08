@@ -307,13 +307,13 @@ class OpenRGBClient(utils.RGBObject):
         '''
         return [device for device in self.devices if device.type == type]
 
-    def get_device_by_name(self, name: str) -> Device:
+    def get_devices_by_name(self, name: str) -> list[Device]:
         '''
-        Gets the device matching the requested name
+        Gets a list of any devices matching the requested name
         
-        :param name: the name of the device you want to get
+        :param name: the name of the device(s) you want to get
         '''
-        return self.devices[[device.name for device in self.devices].index(name)]
+        return [device for device in self.devices if device.name == name]
     
     def load_profile(self, name: str, directory: str = ''):
         '''
