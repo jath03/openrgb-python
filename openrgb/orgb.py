@@ -314,7 +314,8 @@ class OpenRGBClient(utils.RGBObject):
         :param name: the name of the device(s) you want to get
         :param exact: whether to check for only a precise match or accpet a device that contains name
         '''
-        if exact: return [device for device in self.devices if device.name == name]
+        if exact: 
+            return [device for device in self.devices if device.name == name]
         return [device for device in self.devices if name.lower() in device.name.lower()]
     
     def load_profile(self, name: str, directory: str = ''):
