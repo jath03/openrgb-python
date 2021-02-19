@@ -143,6 +143,17 @@ class NetworkClient:
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
+            elif packet_type == utils.PacketType.REQUEST_PROFILE_LIST:
+                try:
+                    data =  bytearray()
+                    while len(data) < packet_size:
+                        data += self.sock.recv(packet_size - len(data))
+                except utils.CONNECTION_ERRORS as e:
+                    self.stop_connection()
+                    raise utils.OpenRGBDisconnected() from e
+                finally:
+                    self.lock.release()
+                self.callback(device_id, packet_type, utils.parse_list(utils.Profile, data, self._protocol_version, 4)[1])
 
     def requestDeviceData(self, device: int):
         '''
@@ -163,6 +174,10 @@ class NetworkClient:
         self.send_header(0, utils.PacketType.REQUEST_CONTROLLER_COUNT, 0)
         self.read()
 
+    def requestProfileList(self):
+        self.send_header(0, utils.PacketType.REQUEST_PROFILE_LIST, 0)
+        self.read()
+
     def send_header(self, device_id: int, packet_type: int, packet_size: int):
         '''
         Sends a header to the SDK
@@ -173,8 +188,12 @@ class NetworkClient:
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
-        if packet_size > 0 or packet_type in (utils.PacketType.REQUEST_CONTROLLER_COUNT, utils.PacketType.REQUEST_CONTROLLER_DATA, utils.PacketType.REQUEST_PROTOCOL_VERSION):
+        if packet_size > 0 or packet_type in (utils.PacketType.REQUEST_CONTROLLER_COUNT,\
+                                              utils.PacketType.REQUEST_CONTROLLER_DATA,\
+                                              utils.PacketType.REQUEST_PROTOCOL_VERSION,\
+                                              utils.PacketType.REQUEST_PROFILE_LIST):
             self.lock.acquire()
+
         try:
             self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
         except utils.CONNECTION_ERRORS as e:

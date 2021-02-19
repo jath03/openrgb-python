@@ -65,6 +65,10 @@ class PacketType(IntEnum):
     REQUEST_PROTOCOL_VERSION = 40
     SET_CLIENT_NAME = 50
     DEVICE_LIST_UPDATED = 100
+    REQUEST_PROFILE_LIST = 150
+    REQUEST_SAVE_PROFILE = 151
+    REQUEST_LOAD_PROFILE = 152
+    REQUEST_DELETE_PROFILE = 153
     RGBCONTROLLER_RESIZEZONE = 1000
     RGBCONTROLLER_UPDATELEDS = 1050
     RGBCONTROLLER_UPDATEZONELEDS = 1051
@@ -494,7 +498,7 @@ class ControllerData:
 
 
 @dataclass
-class Profile:
+class LocalProfile:
     '''
     A dataclass to load, store, and pack the data found in an OpenRGB profile file.
     '''
@@ -508,7 +512,7 @@ class Profile:
         return data
 
     @classmethod
-    def unpack(cls, profile: BinaryIO) -> Profile:
+    def unpack(cls, profile: BinaryIO) -> LocalProfile:
         header = profile.read(16 + struct.calcsize("I"))
         if struct.unpack("16s", header[:16])[0] != b"OPENRGB_PROFILE\x00":
             raise ValueError("The file is not an OpenRGB profile")
@@ -525,6 +529,21 @@ class Profile:
                 controllers.append(new_data)
             return cls(controllers)
 
+
+@dataclass
+class Profile:
+    '''
+    A simple dataclass to parse profiles from the server.
+    '''
+    name: str
+
+    def pack(self) -> bytearray:
+        return bytearray(f"{self.name}\0", 'utf-8')
+
+    @classmethod
+    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Profile:
+        x, s = parse_string(data, start)
+        return x, cls(s)
 
 class RGBObject:
     '''

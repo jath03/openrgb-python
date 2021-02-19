@@ -259,18 +259,20 @@ class OpenRGBClient(utils.RGBObject):
         '''
         self.device_num = 0
         self.devices = []
+        self.profiles = []
         self.comms = NetworkClient(self._callback, address, port, name, protocol_version)
         self.address = address
         self.port = port
         self.name = name
         self.comms.requestDeviceNum()
         while any((dev is None for dev in self.devices)):
-            sleep(.2)
+            sleep(.1)
+        self.update_profiles()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
 
-    def _callback(self, device: int, type: int, data: Optional[Union[int, utils.ControllerData]]):
+    def _callback(self, device: int, type: int, data: Optional):
         if type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
             if data != self.device_num or data != len(self.devices):
                 self.device_num = data
@@ -288,6 +290,8 @@ class OpenRGBClient(utils.RGBObject):
         elif type == utils.PacketType.DEVICE_LIST_UPDATED:
             self.device_num = 0
             self.comms.requestDeviceNum()
+        elif type == utils.PacketType.REQUEST_PROFILE_LIST:
+            self.profiles = data
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
@@ -310,55 +314,101 @@ class OpenRGBClient(utils.RGBObject):
     def get_devices_by_name(self, name: str, exact: bool = True) -> list[Device]:
         '''
         Gets a list of any devices matching the requested name
-        
+
         :param name: the name of the device(s) you want to get
         :param exact: whether to check for only a precise match or accpet a device that contains name
         '''
-        if exact: 
+        if exact:
             return [device for device in self.devices if device.name == name]
         return [device for device in self.devices if name.lower() in device.name.lower()]
-    
-    def load_profile(self, name: str, directory: str = ''):
-        '''
-        Loads an OpenRGB profile file
 
-        :param name: the name of the profile
+    def load_profile(self, name: Union[str, int, utils.Profile], local: bool = False, directory: str = ''):
+        '''
+        Loads an OpenRGB profile
+
+        :param name: Can be a profile's name, index, or even the Profile itself
+        :param local: Whether to load a local file or a profile on the server.
         :param directory: what directory the profile is in.  Defaults to HOME/.config/OpenRGB
         '''
-        if directory == '':
-            directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
-        with open(f'{directory}/{name}.orp', 'rb') as f:
-            controllers = utils.Profile.unpack(f).controllers
-            pairs = []
-            for device in self.devices:
-                for new_controller in controllers:
-                    if new_controller.name == device.name \
-                            and new_controller.device_type == device.type \
-                            and new_controller.metadata.description == device.metadata.description:
-                        controllers.remove(new_controller)
-                        pairs.append((new_controller, device))
-            # print("Pairs:")
-            for new_controller, device in pairs:
-                # print(device.name, new_controller.name)
-                if new_controller.colors != device.colors:
-                    device.set_colors(new_controller.colors)
-                # print(new_controller.active_mode)
-                if new_controller.active_mode != device.active_mode:
-                    device.set_mode(new_controller.active_mode)
+        if local:
+            assert type(name) is str
+            if directory == '':
+                directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+            with open(f'{directory}/{name}.orp', 'rb') as f:
+                controllers = utils.LocalProfile.unpack(f).controllers
+                pairs = []
+                for device in self.devices:
+                    for new_controller in controllers:
+                        if new_controller.name == device.name \
+                                and new_controller.device_type == device.type \
+                                and new_controller.metadata.description == device.metadata.description:
+                            controllers.remove(new_controller)
+                            pairs.append((new_controller, device))
+                # print("Pairs:")
+                for new_controller, device in pairs:
+                    # print(device.name, new_controller.name)
+                    if new_controller.colors != device.colors:
+                        device.set_colors(new_controller.colors)
+                    # print(new_controller.active_mode)
+                    if new_controller.active_mode != device.active_mode:
+                        device.set_mode(new_controller.active_mode)
+        else:
+            if type(name) is str:
+                name = next(p for p in self.profiles if p.name.lower() == name.lower())
+            elif type(name) is int:
+                name = self.profiles[name]
+            elif type(name) is utils.Profile:
+                pass
+            name = name.pack()
+            self.comms.send_header(0, utils.PacketType.REQUEST_LOAD_PROFILE, len(name))
+            self.comms.send_data(name)
 
-    def save_profile(self, name: str, directory: str = ''):
+    def save_profile(self, name: Union[str, int, utils.Profile], local: bool = False, directory: str = ''):
         '''
-        Saves the current state of all of your devices to an OpenRGB profile
-        file
+        Saves the current state of all of your devices to a new or existing
+        OpenRGB profile
 
-        :param name: the name of the profile to save
+        :param name: Can be a profile's name, index, or even the Profile itself
+        :param local: Whether to load a local file or a profile on the server.
         :param directory: what directory to save the profile in.  Defaults to HOME/.config/OpenRGB
         '''
-        self.update()
-        if directory == '':
-            directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
-        with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
-            f.write(utils.Profile([dev.data for dev in self.devices]).pack())
+        if local:
+            self.update()
+            if directory == '':
+                directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+            with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
+                f.write(utils.Profile([dev.data for dev in self.devices]).pack())
+        else:
+            if type(name) is str:
+                try:
+                    name = next(p for p in self.profiles if p.name.lower() == name.lower())
+                except StopIteration:
+                    name = utils.Profile(name)
+            elif type(name) is int:
+                name = self.profiles[name]
+            elif type(name) is utils.Profile:
+                pass
+            name = name.pack()
+            self.comms.send_header(0, utils.PacketType.REQUEST_SAVE_PROFILE, len(name))
+            self.comms.send_data(name)
+            self.update_profiles()
+
+    def delete_profile(self, name: Union[str, int, utils.Profile]):
+        '''
+        Deletes the selected profile
+
+        :param name: Can be a profile's name, index, or even the Profile itself
+        '''
+        if type(name) is str:
+            name = next(p for p in self.profiles if p.name.lower() == name.lower())
+        elif type(name) is int:
+            name = self.profiles[name]
+        elif type(name) is utils.Profile:
+            pass
+        name = name.pack()
+        self.comms.send_header(0, utils.PacketType.REQUEST_DELETE_PROFILE, len(name))
+        self.comms.send_data(name)
+        self.update_profiles()
 
     def update(self):
         '''
@@ -369,6 +419,12 @@ class OpenRGBClient(utils.RGBObject):
         self.comms.requestDeviceNum()
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
+
+    def update_profiles(self):
+        '''
+        Gets the list of available profiles from the server.
+        '''
+        self.comms.requestProfileList()
 
     def show(self, fast: bool = False, force: bool = False):
         '''
