@@ -120,9 +120,10 @@ class NetworkClient:
                     except RuntimeError:
                         pass
             elif packet_type == utils.PacketType.REQUEST_CONTROLLER_DATA:
-                data = bytearray(packet_size)
                 try:
-                    self.sock.recv_into(data)
+                    data =  bytearray()
+                    while len(data) < packet_size:
+                        data += self.sock.recv(packet_size - len(data))
                 except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
