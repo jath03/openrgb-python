@@ -327,7 +327,7 @@ class OpenRGBClient(utils.RGBObject):
         Loads an OpenRGB profile
 
         :param name: Can be a profile's name, index, or even the Profile itself
-        :param local: Whether to load a local file or a profile on the server.
+        :param local: Whether to load a local file or a profile from the server.
         :param directory: what directory the profile is in.  Defaults to HOME/.config/OpenRGB
         '''
         if local:
@@ -354,7 +354,10 @@ class OpenRGBClient(utils.RGBObject):
                         device.set_mode(new_controller.active_mode)
         else:
             if type(name) is str:
-                name = next(p for p in self.profiles if p.name.lower() == name.lower())
+                try:
+                    name = next(p for p in self.profiles if p.name.lower() == name.lower())
+                except StopIteration as e:
+                    raise ValueError(f"`{name}` is not an existing profile") from e
             elif type(name) is int:
                 name = self.profiles[name]
             elif type(name) is utils.Profile:
@@ -400,7 +403,10 @@ class OpenRGBClient(utils.RGBObject):
         :param name: Can be a profile's name, index, or even the Profile itself
         '''
         if type(name) is str:
-            name = next(p for p in self.profiles if p.name.lower() == name.lower())
+            try:
+                name = next(p for p in self.profiles if p.name.lower() == name.lower())
+            except StopIteration as e:
+                raise ValueError(f"`{name}` is not an existing profile") from e
         elif type(name) is int:
             name = self.profiles[name]
         elif type(name) is utils.Profile:
