@@ -40,6 +40,16 @@ consistent way to get a specific device is through its device type.
 If you have more than one device of a specific type, then you can try filtering
 by the devices' metadata, name, or any other property.
 
+
+Another option is to select a device(s) by name.
+
+.. code-block:: python
+
+    corsair_thing = cli.get_devices_by_name('Corsair Lighting Node Pro')[0]
+    # Or less exactly
+    cooler = cli.get_devices_by_name('wraith prism', False)[0]
+    # Actual name is 'AMD Wraith Prism'
+
 Setting colors
 --------------
 Colors are handled by the :any:`RGBColor` object.  It can be initialized from
@@ -124,16 +134,52 @@ resize it at some point.
 
 Using Profiles
 --------------
-Once you have set your RGB exactly how you like it, you probably want to save
-the state into a profile.  This function will save the current state of you
-lights to a profile.
+OpenRGB's profiles are a way save the state of your devices after you've set
+everything up exactly how you want it and be able to load that state easily.
+Existing profiles are stored in the :any:`profiles<OpenRGBClient.profiles>`
+attribute of an :any:`OpenRGBClient`.  To save a profile, first configure your
+RGB setup how you want it, then run
 
 .. code-block:: python
 
-    cli.save_profile('perfection')
+    cli.save_profile('perfection') # Saves to a new or existing profile called "perfection"
+    cli.save_profile(0) # Overwrites the first profile in the list
 
-This will save a profile called perfection.orp in OpenRGB's config directory by
-default, so you can load the profile directly from OpenRGB's profile list.
+Loading profiles is equally as simple.
+
+.. code-block:: python
+
+    cli.load_profile('perfection') # Finds and loads a profile called perfection
+    cli.load_profile(0) # Loads the first profile in the list
+
+If you want to you can also delete a profile.
+
+.. code-block:: python
+
+    cli.delete_profile('perfection') # Deletes a profile called perfection
+    cli.delete_profile(0) # Deletes the first profile in the list
+
+If you created a new profile from OpenRGB and want to make sure your client can
+see it, you can use the :any:`cli.update_profiles<OpenRGBClient.update_profiles>`
+function to get the latest list of profiles from the server.
+
+Old Profile System
+++++++++++++++++++
+
+There are two ways to work with profiles: locally and remotely.
+The old way (locally) saved profiles to a local :code:`.orp` file.  The newer,
+recommended way is remotely.  Remotely saving a profile just tells the server to
+save its current state to a profile, the same way that it would if you  pressed
+the "Save Profile" button on OpenRGB's GUI.  If you still want to locally save
+profiles, you can do so with an extra argument.
+
+.. code-block:: python
+
+    cli.save_profile('perfection', True) # Locally saves the profile
+
+Locally saving a profile will save a file called perfection.orp in OpenRGB's
+config directory by default, so you can load the profile directly from OpenRGB's
+profile list.
 
 Loading profiles in OpenRGB-Python is equally as simple as saving them.  This
 function will set your lights to the same as they were when they were saved.
@@ -141,7 +187,7 @@ It can load profiles saved from OpenRGB itself, or OpenRGB-Python.
 
 .. code-block:: python
 
-    cli.load_profile('perfection')
+    cli.load_profile('perfection', True) # loads a  local profile
 
 .. warning::
 
