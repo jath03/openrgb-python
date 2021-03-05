@@ -81,6 +81,10 @@ class OpenRGBDisconnected(ConnectionError):
     pass
 
 
+class SDKVersionError(NotImplementedError):
+    pass
+
+
 def parse_string(data: bytes, start: int = 0) -> tuple[int, str]:
     '''
     Parses a string based on a size.

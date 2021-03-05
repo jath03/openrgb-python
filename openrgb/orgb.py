@@ -267,7 +267,8 @@ class OpenRGBClient(utils.RGBObject):
         self.comms.requestDeviceNum()
         while any((dev is None for dev in self.devices)):
             sleep(.1)
-        self.update_profiles()
+        if self.comms._protocol_version >= 2:
+            self.update_profiles()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
@@ -353,6 +354,8 @@ class OpenRGBClient(utils.RGBObject):
                     if new_controller.active_mode != device.active_mode:
                         device.set_mode(new_controller.active_mode)
         else:
+            if self.comms._protocol_version < 2:
+                raise utils.SDKVersionError("Your version of OpenRGB doesn't support SDK profile controls")
             if type(name) is str:
                 try:
                     name = next(p for p in self.profiles if p.name.lower() == name.lower())
@@ -382,6 +385,8 @@ class OpenRGBClient(utils.RGBObject):
             with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
                 f.write(utils.Profile([dev.data for dev in self.devices]).pack())
         else:
+            if self.comms._protocol_version < 2:
+                raise utils.SDKVersionError("Your version of OpenRGB doesn't support SDK profile controls")
             if type(name) is str:
                 try:
                     name = next(p for p in self.profiles if p.name.lower() == name.lower())
@@ -402,6 +407,8 @@ class OpenRGBClient(utils.RGBObject):
 
         :param name: Can be a profile's name, index, or even the Profile itself
         '''
+        if self.comms._protocol_version < 2:
+            raise utils.SDKVersionError("Your version of OpenRGB doesn't support SDK profile controls")
         if type(name) is str:
             try:
                 name = next(p for p in self.profiles if p.name.lower() == name.lower())
@@ -430,6 +437,8 @@ class OpenRGBClient(utils.RGBObject):
         '''
         Gets the list of available profiles from the server.
         '''
+        if self.comms._protocol_version < 2:
+            raise utils.SDKVersionError("Your version of OpenRGB doesn't support SDK profile controls")
         self.comms.requestProfileList()
 
     def show(self, fast: bool = False, force: bool = False):

@@ -6,7 +6,7 @@ import threading
 from openrgb import utils
 from typing import Callable
 
-OPENRGB_PROTOCOL_VERSION = 1
+OPENRGB_PROTOCOL_VERSION = 2
 
 if sys.platform.startswith("linux"):
     NOSIGNAL = socket.MSG_NOSIGNAL
@@ -32,7 +32,7 @@ class NetworkClient:
         self.max_protocol_version = OPENRGB_PROTOCOL_VERSION
         if protocol_version is not None:
             if protocol_version > self.max_protocol_version:
-                raise ValueError(f"version {protocol_version} is greater than maximum supported version {self.max_protocol_version}")
+                raise utils.SDKVersionError(f"Requested protocol version {protocol_version} is greater than maximum supported version {self.max_protocol_version}")
             self._protocol_version = protocol_version
         else:
             self._protocol_version = OPENRGB_PROTOCOL_VERSION
