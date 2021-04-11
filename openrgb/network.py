@@ -68,7 +68,7 @@ class NetworkClient:
         except socket.timeout:
             self._protocol_version = 0
             self.lock.release()
-        self.sock.settimeout(None)
+        self.sock.settimeout(10.0)
         # Sending the client name
         name = bytes(f"{self.name}\0", 'utf-8')
         self.send_header(0, utils.PacketType.SET_CLIENT_NAME, len(name))
@@ -78,6 +78,11 @@ class NetworkClient:
         '''
         Closes the active socket
         '''
+        try:
+            self.lock.release()
+        except Exception:
+            pass
+        
         if self.sock is not None:
             self.sock.close()
             self.sock = None
@@ -195,7 +200,11 @@ class NetworkClient:
             self.lock.acquire()
 
         try:
-            self.sock.send(struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size), NOSIGNAL)
+            data = struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size)
+            sent = self.sock.send(data, NOSIGNAL)
+            if sent != len(data):
+                self.stop_connection()
+                raise utils.OpenRGBDisconnected()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
@@ -209,7 +218,10 @@ class NetworkClient:
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
         try:
-            self.sock.send(data, NOSIGNAL)
+            sent = self.sock.send(data, NOSIGNAL)
+            if (sent != len(data)):
+                self.stop_connection()
+                raise utils.OpenRGBDisconnected()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
