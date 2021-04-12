@@ -55,7 +55,7 @@ class NetworkClient:
 
         try:
             self.sock.connect((self.address, self.port))
-        except ConnectionRefusedError:
+        except:
             self.sock = None
             raise
 
