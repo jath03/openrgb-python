@@ -219,7 +219,7 @@ class NetworkClient:
             raise utils.OpenRGBDisconnected()
         try:
             sent = self.sock.send(data, NOSIGNAL)
-            if (sent != len(data)):
+            if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
         except utils.CONNECTION_ERRORS as e:
