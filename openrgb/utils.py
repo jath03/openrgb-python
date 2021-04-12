@@ -4,10 +4,11 @@ from typing import BinaryIO
 from dataclasses import dataclass
 import struct
 import colorsys
+import socket
 
 HEADER_SIZE = 16
 
-CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError, TimeoutError)
+CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout)
 
 
 class ModeFlags(IntFlag):
