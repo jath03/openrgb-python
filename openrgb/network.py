@@ -52,6 +52,7 @@ class NetworkClient:
         if self.sock is not None:
             return
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(1.0)
 
         try:
             self.sock.connect((self.address, self.port))
@@ -60,7 +61,6 @@ class NetworkClient:
             raise
 
         # Checking server protocol version
-        self.sock.settimeout(1.0)
         self.send_header(0, utils.PacketType.REQUEST_PROTOCOL_VERSION, struct.calcsize('I'))
         self.send_data(struct.pack("I", self._protocol_version), False)
         try:
