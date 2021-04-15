@@ -8,7 +8,7 @@ import socket
 
 HEADER_SIZE = 16
 
-CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout)
+CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError, TimeoutError, OSError, socket.timeout)
 
 
 class ModeFlags(IntFlag):

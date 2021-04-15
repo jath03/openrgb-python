@@ -56,7 +56,7 @@ class NetworkClient:
 
         try:
             self.sock.connect((self.address, self.port))
-        except OSError:
+        except utils.CONNECTION_ERRORS:
             self.sock = None
             raise
 
@@ -65,7 +65,7 @@ class NetworkClient:
         self.send_data(struct.pack("I", self._protocol_version), False)
         try:
             self.read()
-        except socket.timeout:
+        except utils.CONNECTION_ERRORS:
             self._protocol_version = 0
             self.lock.release()
         self.sock.settimeout(10.0)
