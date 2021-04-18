@@ -523,16 +523,17 @@ class LocalProfile:
             raise ValueError("The file is not an OpenRGB profile")
         version = struct.unpack("I", header[16:])[0]
         if version == 1:
-            controllers = []
-            while True:
-                d = profile.read(struct.calcsize("I"))
-                if len(d) < struct.calcsize("I"):
-                    break
-                size = struct.unpack("I", d)[0]
-                profile.seek(profile.tell() - struct.calcsize("I"))
-                new_data = ControllerData.unpack(profile.read(size), 0)
-                controllers.append(new_data)
-            return cls(controllers)
+            version = 0
+        controllers = []
+        while True:
+            d = profile.read(struct.calcsize("I"))
+            if len(d) < struct.calcsize("I"):
+                break
+            size = struct.unpack("I", d)[0]
+            profile.seek(profile.tell() - struct.calcsize("I"))
+            new_data = ControllerData.unpack(profile.read(size), version)
+            controllers.append(new_data)
+        return cls(controllers)
 
 
 @dataclass
