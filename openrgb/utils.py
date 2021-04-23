@@ -51,7 +51,9 @@ class DeviceType(IntEnum):
     HEADSET_STAND = 9
     GAMEPAD = 10
     LIGHT = 11
-    UNKNOWN = 12
+    SPEAKER = 12
+    VIRTUAL = 13
+    UNKNOWN = 14
 
 
 class ZoneType(IntEnum):
