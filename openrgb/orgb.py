@@ -1,5 +1,6 @@
 from __future__ import annotations
 import struct
+import platform
 from openrgb import utils
 from typing import Union, Optional
 from openrgb.network import NetworkClient
@@ -329,12 +330,17 @@ class OpenRGBClient(utils.RGBObject):
 
         :param name: Can be a profile's name, index, or even the Profile itself
         :param local: Whether to load a local file or a profile from the server.
-        :param directory: what directory the profile is in.  Defaults to HOME/.config/OpenRGB
+        :param directory: what directory the profile is in.  Defaults to OpenRGB's config directory for supported OS's (Windows or Linux), or falls back to using the current working directory.
         '''
         if local:
             assert type(name) is str
             if directory == '':
-                directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                if platform.system() == "Linux":
+                    directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                elif platform.system() == "Windows":
+                    directory = environ['APPDATA'].rstrip("\\") + "\\OpenRGB"
+                else:
+                    directory = '.'
             with open(f'{directory}/{name}.orp', 'rb') as f:
                 controllers = utils.LocalProfile.unpack(f).controllers
                 pairs = []
@@ -376,12 +382,17 @@ class OpenRGBClient(utils.RGBObject):
 
         :param name: Can be a profile's name, index, or even the Profile itself
         :param local: Whether to load a local file or a profile on the server.
-        :param directory: what directory to save the profile in.  Defaults to HOME/.config/OpenRGB
+        :param directory: what directory to save the profile in.  Defaults to OpenRGB's config directory for supported OS's (Windows or Linux), or falls back to using the current working directory.
         '''
         if local:
             self.update()
             if directory == '':
-                directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                if platform.system() == "Linux":
+                    directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                elif platform.system() == "Windows":
+                    directory = environ['APPDATA'].rstrip("\\") + "\\OpenRGB"
+                else:
+                    directory = '.'
             with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
                 f.write(utils.Profile([dev.data for dev in self.devices]).pack())
         else:

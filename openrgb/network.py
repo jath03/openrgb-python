@@ -1,5 +1,5 @@
 from __future__ import annotations
-import sys
+import platform
 import socket
 import struct
 import threading
@@ -8,9 +8,9 @@ from typing import Callable
 
 OPENRGB_PROTOCOL_VERSION = 2
 
-if sys.platform.startswith("linux"):
+if platform.system() == "Linux":
     NOSIGNAL = socket.MSG_NOSIGNAL
-elif sys.platform.startswith("win"):
+elif platform.system() == "Windows":
     NOSIGNAL = 0
 
 
