@@ -5,7 +5,7 @@ from typing import Union, Optional
 from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from time import sleep
-from os import environ
+from os import environ, name as os_name
 
 
 class LED(utils.RGBObject):
@@ -335,6 +335,7 @@ class OpenRGBClient(utils.RGBObject):
             assert type(name) is str
             if directory == '':
                 directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                if os_name = 'nt': directory = environ['APPDATA'] + "\\OpenRGB"
             with open(f'{directory}/{name}.orp', 'rb') as f:
                 controllers = utils.LocalProfile.unpack(f).controllers
                 pairs = []
@@ -382,6 +383,7 @@ class OpenRGBClient(utils.RGBObject):
             self.update()
             if directory == '':
                 directory = environ['HOME'].rstrip("/") + "/.config/OpenRGB"
+                if os_name = 'nt': directory = environ['APPDATA'] + "\\OpenRGB"
             with open(f'{directory.rstrip("/")}/{name}.orp', 'wb') as f:
                 f.write(utils.Profile([dev.data for dev in self.devices]).pack())
         else:
