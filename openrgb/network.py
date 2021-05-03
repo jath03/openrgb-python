@@ -180,6 +180,9 @@ class NetworkClient:
         self.read()
 
     def requestProfileList(self):
+        '''
+        Sends the request for the available profiles
+        '''
         self.send_header(0, utils.PacketType.REQUEST_PROFILE_LIST, 0)
         self.read()
 
@@ -193,11 +196,9 @@ class NetworkClient:
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
-        if packet_size > 0 or packet_type in (utils.PacketType.REQUEST_CONTROLLER_COUNT,\
-                                              utils.PacketType.REQUEST_CONTROLLER_DATA,\
-                                              utils.PacketType.REQUEST_PROTOCOL_VERSION,\
-                                              utils.PacketType.REQUEST_PROFILE_LIST):
-            self.lock.acquire()
+
+        if not self.lock.acquire(timeout=10):
+            raise utils.OpenRGBDisconnected("SDK server did not respond to previous request")
 
         try:
             data = struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size)
@@ -205,6 +206,11 @@ class NetworkClient:
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
+            if packet_size == 0 and packet_type not in (utils.PacketType.REQUEST_CONTROLLER_COUNT,\
+                                                  utils.PacketType.REQUEST_CONTROLLER_DATA,\
+                                                  utils.PacketType.REQUEST_PROTOCOL_VERSION,\
+                                                  utils.PacketType.REQUEST_PROFILE_LIST):
+                self.lock.release()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
@@ -222,9 +228,8 @@ class NetworkClient:
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
+            if release_lock:
+                self.lock.release()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
-        finally:
-            if release_lock:
-                self.lock.release()
