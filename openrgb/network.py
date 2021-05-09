@@ -10,7 +10,7 @@ OPENRGB_PROTOCOL_VERSION = 2
 
 if platform.system() == "Linux":
     NOSIGNAL = socket.MSG_NOSIGNAL
-elif platform.system() == "Windows":
+else:
     NOSIGNAL = 0
 
 
