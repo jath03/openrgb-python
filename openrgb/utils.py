@@ -607,6 +607,9 @@ class RGBContainer(RGBObject):
     def show(self, fast: bool = False, force: bool = False):
         '''
         Applies changes in the color attribute
+
+        :param fast: Whether or not update the device on each call
+        :param force: If True, the function will update every led, regardless of previous state.
         '''
         if len(self.colors) > len(self._colors):
             raise ValueError(f"`self.colors` is longer than expected length `{len(self._colors)}`")

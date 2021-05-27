@@ -83,7 +83,7 @@ To set an :any:`RGBObject` to a solid color, use the
 
 .. warning::
 
-	Setting the color for the same device more than once without some kind of delay in between can cause undefined behavior.
+	Interacting with the SDK (setting colors, changing modes, resizing zones... ) for the same device more than once without some kind of delay in between can cause undefined behavior.
 
 
 If you want to set an :any:`RGBContainer` to more than one color, use the

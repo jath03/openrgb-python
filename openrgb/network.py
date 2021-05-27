@@ -44,10 +44,6 @@ class NetworkClient:
     def start_connection(self):
         '''
         Initializes a socket, connects to the SDK, and sets the client name
-
-        :param address: the ip address of the SDK server
-        :param port: the port of the SDK server
-        :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
         '''
         if self.sock is not None:
             return
