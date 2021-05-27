@@ -14,6 +14,7 @@ Welcome to OpenRGB-Python's documentation!
    pages/usage
    pages/effects
    pages/advanced
+   pages/faq
    pages/api
 
 
