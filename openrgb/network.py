@@ -78,7 +78,7 @@ class NetworkClient:
             self.lock.release()
         except Exception:
             pass
-        
+
         if self.sock is not None:
             self.sock.close()
             self.sock = None
@@ -103,10 +103,12 @@ class NetworkClient:
             raise utils.OpenRGBDisconnected()
         # Unpacking the contents of the raw header struct into a list
         buff = list(struct.unpack('ccccIII', header))
-        # print(buff[:4])
+
+        # Checking packet signature
         if buff[:4] == [b'O', b'R', b'G', b'B']:
             device_id, packet_type, packet_size = buff[4:]
-            # print(device_id, packet_type, packet_size)
+
+            # Parse information from each packet type
             if packet_type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
                 try:
                     buff = struct.unpack("I", self.sock.recv(packet_size))
@@ -120,9 +122,10 @@ class NetworkClient:
                         self.lock.release()
                     except RuntimeError:
                         pass
+
             elif packet_type == utils.PacketType.REQUEST_CONTROLLER_DATA:
                 try:
-                    data =  bytearray()
+                    data = bytearray()
                     while len(data) < packet_size:
                         data += self.sock.recv(packet_size - len(data))
                 except utils.CONNECTION_ERRORS as e:
@@ -130,11 +133,16 @@ class NetworkClient:
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
-                self.callback(device_id, packet_type, utils.ControllerData.unpack(data, self._protocol_version))
+                try:
+                    self.callback(device_id, packet_type, utils.ControllerData.unpack(data, self._protocol_version))
+                except utils.PARSING_ERRORS as e:
+                    raise utils.ControllerParsingError(f"Unable to parse data from request `{packet_type}` for device #{device_id}") from e
+
             elif packet_type == utils.PacketType.DEVICE_LIST_UPDATED:
                 assert device_id == 0 and packet_size == 0
                 self.read()
                 self.callback(device_id, packet_type, 0)
+
             elif packet_type == utils.PacketType.REQUEST_PROTOCOL_VERSION:
                 try:
                     self.max_protocol_version = min(struct.unpack("I", self.sock.recv(packet_size))[0], OPENRGB_PROTOCOL_VERSION)
@@ -144,9 +152,10 @@ class NetworkClient:
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
+
             elif packet_type == utils.PacketType.REQUEST_PROFILE_LIST:
                 try:
-                    data =  bytearray()
+                    data = bytearray()
                     while len(data) < packet_size:
                         data += self.sock.recv(packet_size - len(data))
                 except utils.CONNECTION_ERRORS as e:
@@ -202,10 +211,10 @@ class NetworkClient:
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
-            if packet_size == 0 and packet_type not in (utils.PacketType.REQUEST_CONTROLLER_COUNT,\
-                                                  utils.PacketType.REQUEST_CONTROLLER_DATA,\
-                                                  utils.PacketType.REQUEST_PROTOCOL_VERSION,\
-                                                  utils.PacketType.REQUEST_PROFILE_LIST):
+            if packet_size == 0 and packet_type not in (utils.PacketType.REQUEST_CONTROLLER_COUNT,
+                                                        utils.PacketType.REQUEST_CONTROLLER_DATA,
+                                                        utils.PacketType.REQUEST_PROTOCOL_VERSION,
+                                                        utils.PacketType.REQUEST_PROFILE_LIST):
                 self.lock.release()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()

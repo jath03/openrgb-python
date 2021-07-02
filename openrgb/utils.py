@@ -9,6 +9,7 @@ import socket
 HEADER_SIZE = 16
 
 CONNECTION_ERRORS = (ConnectionResetError, BrokenPipeError, TimeoutError, socket.timeout)
+PARSING_ERRORS = (UnicodeError, struct.error)
 
 
 class ModeFlags(IntFlag):
@@ -85,6 +86,10 @@ class OpenRGBDisconnected(ConnectionError):
 
 
 class SDKVersionError(NotImplementedError):
+    pass
+
+
+class ControllerParsingError(ValueError):
     pass
 
 
