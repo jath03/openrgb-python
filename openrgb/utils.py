@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum, IntFlag
-from typing import BinaryIO
+from typing import BinaryIO, Any, Iterable, Optional
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -93,22 +93,29 @@ class ControllerParsingError(ValueError):
     pass
 
 
-def parse_string(data: bytes, start: int = 0) -> tuple[int, str]:
+def parse_var(type: str, data: Iterable[bytes]) -> Any:
+    size = struct.calcsize(type)
+    d = []
+    for _ in range(size):
+        d.append(next(data))
+    try:
+        return struct.unpack(type, bytes(d))[0]
+    except IndexError:
+        return
+
+
+def parse_string(data: Iterable[bytes]) -> str:
     '''
     Parses a string based on a size.
 
     :param data: the raw data to parse
-    :param start: the location in the data to start parsing at
-    :returns: the location in the data of the end of the string and the string itself
+    :returns: A parsed string
     '''
-    size = struct.unpack('H', data[start:start + struct.calcsize('H')])[0]
-    start += struct.calcsize("H")
-    val = struct.unpack(f"{size}s", data[start:start + size])[0].decode()
-    start += size
-    return start, val.strip("\x00")
+    length = parse_var('H', data)
+    return parse_var(f'{length}s', data).decode().rstrip('\x00')
 
 
-def pack_string(string: str) -> bytearray:
+def pack_string(string: str) -> bytes:
     '''
     Packs a string into bytes
 
@@ -119,7 +126,7 @@ def pack_string(string: str) -> bytearray:
     return struct.pack(f"H{num}s", num + 1, string.encode('ascii')) + b'\x00'
 
 
-def parse_list(kind: object, data: bytearray, version: int, start: int = 0) -> tuple[int, list]:
+def parse_list(kind: object, data: Iterable[bytes], version: int) -> list:
     '''
     Parses a list of objects and returns them
 
@@ -127,13 +134,11 @@ def parse_list(kind: object, data: bytearray, version: int, start: int = 0) -> t
     :param data: the raw data to parse
     :param start: the location in the data to start parsing
     '''
-    num = struct.unpack("H", data[start:start + struct.calcsize("H")])[0]
-    start += struct.calcsize("H")
+    length = parse_var('H', data)
     things = []
-    for x in range(num):
-        start, thing = kind.unpack(data, version, start, x)
-        things.append(thing)
-    return start, things
+    for x in range(length):
+        things.append(kind.unpack(data, version, x))
+    return things
 
 
 def pack_list(things: list, version: int) -> bytearray:
@@ -161,15 +166,17 @@ class RGBColor:
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, RGBColor]:
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> RGBColor:
         '''
         Unpacks an RGBColor object from bytes
 
         :returns: an RGBColor object
         '''
-        size = struct.calcsize("BBBx")
-        r, g, b = struct.unpack("BBBx", data[start:start + size])
-        return (start + size), cls(r, g, b)
+        r = parse_var('B', data)
+        g = parse_var('B', data)
+        b = parse_var('B', data)
+        parse_var('x', data)
+        return cls(r, g, b)
 
     @classmethod
     def fromHSV(cls, hue: int, saturation: int, value: int) -> RGBColor:
@@ -203,17 +210,16 @@ class LEDData:
         )
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, LEDData]:
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> LEDData:
         '''
         Creates a new LEDData object from raw bytes
 
         :param data: the raw bytes from the SDK
         :param start: what place in the data object to start
         '''
-        start, name = parse_string(data, start)
-        value = struct.unpack("I", data[start:start + struct.calcsize("I")])[0]
-        start += struct.calcsize("I")
-        return start, cls(name, value)
+        name = parse_string(data)
+        value = parse_var('I', data)
+        return cls(name, value)
 
 
 @dataclass
@@ -224,9 +230,13 @@ class ModeData:
     flags: ModeFlags
     speed_min: int
     speed_max: int
+    brightness_min: int
+    brightness_max: int
     colors_min: int
     colors_max: int
+
     speed: int
+    brightness: int
     direction: ModeDirections
     color_mode: ModeColors
     colors: list[RGBColor]
@@ -241,6 +251,8 @@ class ModeData:
                 assert self.speed_min <= self.speed <= self.speed_max or self.speed_max <= self.speed <= self.speed_min
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR in self.flags:
                 assert self.colors_min <= len(self.colors) <= self.colors_max
+            if ModeFlags.HAS_BRIGHTNESS in self.flags:
+                assert self.brightness_min <= self.brightness <= self.brightness_max
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Required values invalid or not present") from e
 
@@ -249,38 +261,41 @@ class ModeData:
                 assert all((i is None for i in (self.speed_max, self.speed_min, self.speed)))
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR not in self.flags:
                 assert all((i is None for i in (self.colors_max, self.colors_min, self.colors)))
+            if ModeFlags.HAS_BRIGHTNESS not in self.flags:
+                assert all((i is None for i in (self.brightness_max, self.brightness_min, self.brightness)))
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Values are set that are not supported by this mode") from e
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int) -> bytes:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
         self.validate()
-        data = (
-            struct.pack("i", self.id)
-            + pack_string(self.name)
-            + struct.pack(
-                f"=i8I",
-                self.value,
-                self.flags,
-                self.speed_min if self.speed_min is not None else 0,
-                self.speed_max if self.speed_max is not None else 0,
-                self.colors_min if self.colors_min is not None else 0,
-                self.colors_max if self.colors_max is not None else 0,
-                self.speed if self.speed is not None else 0,
-                self.direction if self.direction is not None else 0,
-                self.color_mode
-            )
-        )
+        data = struct.pack("i", self.id)
+        data += pack_string(self.name)
+        data += struct.pack('i', self.value)
+        data += struct.pack('I', self.flags)
+        data += struct.pack('I', self.speed_min if self.speed_min is not None else 0)
+        data += struct.pack('I', self.speed_max if self.speed_max is not None else 0)
+        if version >= 3:
+            data += struct.pack('I', self.brightness_min if self.brightness_min is not None else 0)
+            data += struct.pack('I', self.brightness_max if self.brightness_max is not None else 0)
+        data += struct.pack('I', self.colors_min if self.colors_min is not None else 0)
+        data += struct.pack('I', self.colors_max if self.colors_max is not None else 0)
+        data += struct.pack('I', self.speed if self.speed is not None else 0)
+        if version >= 3:
+            data += struct.pack('I', self.brightness if self.brightness is not None else 0)
+        data += struct.pack('I', self.direction if self.direction is not None else 0)
+        data += struct.pack('I', self.color_mode)
+
         data += pack_list(self.colors if self.colors is not None else [], version)
         data = struct.pack("I", len(data) + struct.calcsize("I")) + data
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, index: int = 0) -> tuple[int, ModeData]:
+    def unpack(cls, data: Iterable[bytes], version: int, index: int = 0) -> ModeData:
         '''
         Creates a new ModeData object from raw bytes
 
@@ -288,28 +303,66 @@ class ModeData:
         :param start: what place in the data object to start
         :param index: which mode this is
         '''
-        start, val = parse_string(data, start)
-        buff = list(struct.unpack("i8IH", data[start:start + struct.calcsize("i8IH")]))
-        start += struct.calcsize("i8IH")
+        name = parse_string(data)
+        value = parse_var('i', data)
+        flags = ModeFlags(parse_var('I', data))
+        speed_min = parse_var('I', data)
+        speed_max = parse_var('I', data)
+        if version >= 3:
+            brightness_min = parse_var('I', data)
+            brightness_max = parse_var('I', data)
+        else:
+            brightness_min = None
+            brightness_max = None
+        colors_min = parse_var('I', data)
+        colors_max = parse_var('I', data)
+
+        speed = parse_var('I', data)
+        if version >= 3:
+            brightness = parse_var('I', data)
+        else:
+            brightness = None
+        direction = parse_var('I', data)
+        color_mode = ModeColors(parse_var('I', data))
+        num_colors = parse_var('H', data)
+
         colors = []
-        buff[1] = ModeFlags(buff[1])
 
         # Garbage data will be sent if these flags aren't set
-        if (ModeFlags.HAS_DIRECTION_HV in buff[1]
-                or ModeFlags.HAS_DIRECTION_UD in buff[1]
-                or ModeFlags.HAS_DIRECTION_LR in buff[1]):
-            buff[7] = ModeDirections(buff[7])
+        if (ModeFlags.HAS_DIRECTION_HV in flags
+                or ModeFlags.HAS_DIRECTION_UD in flags
+                or ModeFlags.HAS_DIRECTION_LR in flags):
+            direction = ModeDirections(direction)
         else:
-            buff[7] = None
-        if ModeFlags.HAS_SPEED not in buff[1]:
-            buff[2], buff[3], buff[6] = None, None, None
-        buff[8] = ModeColors(buff[8])
-        for i in range(buff[-1]):
-            start, color = RGBColor.unpack(data, version, start)
+            direction = None
+        if ModeFlags.HAS_SPEED not in flags:
+            speed_min, speed_max, speed = None, None, None
+        if ModeFlags.HAS_BRIGHTNESS not in flags:
+            brightness_min, brightness_max, brightness = None, None, None
+
+        for i in range(num_colors):
+            color = RGBColor.unpack(data, version)
             colors.append(color)
-        if buff[-1] == 0:
-            colors, buff[4], buff[5] = None, None, None
-        return start, cls(index, val, *buff[:9], colors)
+        if num_colors == 0:
+            colors, colors_min, colors_max = None, None, None
+
+        return cls(
+            index,
+            name,
+            value,
+            flags,
+            speed_min,
+            speed_max,
+            brightness_min,
+            brightness_max,
+            colors_min,
+            colors_max,
+            speed,
+            brightness,
+            direction,
+            color_mode,
+            colors
+        )
 
 
 @dataclass
@@ -319,9 +372,9 @@ class ZoneData:
     leds_min: int
     leds_max: int
     num_leds: int
-    mat_height: int
-    mat_width: int
-    matrix_map: list[list] = None
+    mat_height: Optional[int]
+    mat_width: Optional[int]
+    matrix_map: Optional[list[list[int]]] = None
     leds: list[LEDData] = None
     colors: list[RGBColor] = None
     start_idx: int = None
@@ -357,28 +410,41 @@ class ZoneData:
         return data
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, ZoneData]:
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> ZoneData:
         '''
         Unpacks the raw data into a ZoneData object
 
         :param data: The raw byte data to unpack
         :param start: What place in the data object to start
         '''
-        start, name = parse_string(data, start)
-        buff = list(struct.unpack("iIIIH", data[start:start + struct.calcsize("iIIIH")]))
-        start += struct.calcsize("iIIIH")
-        height, width = 0, 0
-        matrix = [[]]
-        if buff[0] == ZoneType.MATRIX:
-            height, width = struct.unpack("II", data[start:start + struct.calcsize("II")])
-            start += struct.calcsize("II")
+        name = parse_string(data)
+        zone_type = ZoneType(parse_var('i', data))
+        leds_min = parse_var('I', data)
+        leds_max = parse_var('I', data)
+        num_leds = parse_var('I', data)
+        matrix_zone_size = parse_var('H', data)
+        if zone_type == ZoneType.MATRIX:
+            height = parse_var('I', data)
+            width = parse_var('I', data)
             matrix = [[] for x in range(height)]
             for y in range(height):
-                matrix[y] = list(struct.unpack(f"{width}I", data[start:start + struct.calcsize("I")*width]))
-                start += struct.calcsize("I")*width
+                for _ in range(width):
+                    matrix[y].append(parse_var('I', data))
             for idx, row in enumerate(matrix):
                 matrix[idx] = [x if x != 0xFFFFFFFF else None for x in row]
-        return start, cls(name, ZoneType(buff[0]), *buff[1:-1], height, width, matrix)
+        else:
+            height, width = None, None
+            matrix = None
+        return cls(
+            name,
+            zone_type,
+            leds_min,
+            leds_max,
+            num_leds,
+            height,
+            width,
+            matrix
+        )
 
 
 @dataclass
@@ -406,20 +472,29 @@ class MetaData:
         return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> tuple[int, MetaData]:
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> MetaData:
         '''
         Unpacks the raw data into a MetaData object
 
         :param data: The raw byte data to unpack
         :param start: What place in the data object to start
         '''
-        buff = []
-        for x in range(5 if version >= 1 else 4):
-            start, val = parse_string(data, start)
-            buff.append(val)
-        if version < 1:
-            buff = [None] + buff
-        return start, cls(*buff)
+        if version >= 1:
+            vendor = parse_string(data)
+        else:
+            vendor = None
+        description = parse_string(data)
+        version = parse_string(data)
+        serial = parse_string(data)
+        location = parse_string(data)
+
+        return cls(
+            vendor,
+            description,
+            version,
+            serial,
+            location
+        )
 
 
 @dataclass
@@ -433,7 +508,7 @@ class ControllerData:
     colors: list[RGBColor]
     active_mode: int
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int) -> bytes:
         '''
         Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
 
@@ -454,32 +529,30 @@ class ControllerData:
         return buff
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0) -> ControllerData:
+    def unpack(cls, raw_data: bytes, version: int, start: int = 0) -> ControllerData:
         '''
         Unpacks the raw bytes received from the SDK into a ControllerData dataclass
 
         :param data: The raw data from a response to a request for device data
         :returns: A ControllerData dataclass ready to pass into the OpenRGBClient's calback function
         '''
-        buff = struct.unpack("Ii", data[start:start + struct.calcsize("Ii")])
-        start += struct.calcsize("Ii")
+        data = iter(raw_data)
+        size = parse_var('I', data)
         try:
-            device_type = DeviceType(buff[1])
+            device_type = DeviceType(parse_var('i', data))
         except ValueError:
             device_type = DeviceType.UNKNOWN
-        start, name = parse_string(data, start)
-        start, metadata = MetaData.unpack(data, version, start)
-        buff = struct.unpack("=Hi", data[start:start + struct.calcsize("=Hi")])
-        start += struct.calcsize("=Hi")
-        num_modes = buff[0]
-        active_mode = buff[-1]
+        name = parse_string(data)
+        metadata = MetaData.unpack(data, version)
+        num_modes = parse_var('H', data)
+        active_mode = parse_var('i', data)
         modes = []
         for x in range(num_modes):
-            start, mode = ModeData.unpack(data, version, start, x)
+            mode = ModeData.unpack(data, version, x)
             modes.append(mode)
-        start, zones = parse_list(ZoneData, data, version, start)
-        start, leds = parse_list(LEDData, data, version, start)
-        start, colors = parse_list(RGBColor, data, version, start)
+        zones = parse_list(ZoneData, data, version)
+        leds = parse_list(LEDData, data, version)
+        colors = parse_list(RGBColor, data, version)
         i = 0
         for zone in zones:
             zone.start_idx = i
@@ -554,9 +627,10 @@ class Profile:
         return bytearray(f"{self.name}\0", 'utf-8')
 
     @classmethod
-    def unpack(cls, data: bytearray, version: int, start: int = 0, *args) -> Profile:
-        x, s = parse_string(data, start)
-        return x, cls(s)
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> Profile:
+        s = parse_string(data)
+        return cls(s)
+
 
 class RGBObject:
     '''

@@ -87,7 +87,7 @@ class NetworkClient:
         '''
         Reads responses from the SDK
 
-        :raises OpenRGBDisconnected: when it loses connection to the SDK
+        :raises utils.OpenRGBDisconnected: when it loses connection to the SDK
         '''
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
@@ -125,7 +125,7 @@ class NetworkClient:
 
             elif packet_type == utils.PacketType.REQUEST_CONTROLLER_DATA:
                 try:
-                    data = bytearray()
+                    data = bytes()
                     while len(data) < packet_size:
                         data += self.sock.recv(packet_size - len(data))
                 except utils.CONNECTION_ERRORS as e:
@@ -155,15 +155,18 @@ class NetworkClient:
 
             elif packet_type == utils.PacketType.REQUEST_PROFILE_LIST:
                 try:
-                    data = bytearray()
+                    data = bytes()
                     while len(data) < packet_size:
                         data += self.sock.recv(packet_size - len(data))
+                    idata = iter(data)
+                    for _ in range(4):
+                        next(idata)
                 except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
-                self.callback(device_id, packet_type, utils.parse_list(utils.Profile, data, self._protocol_version, 4)[1])
+                self.callback(device_id, packet_type, utils.parse_list(utils.Profile, idata, self._protocol_version))
 
     def requestDeviceData(self, device: int):
         '''
