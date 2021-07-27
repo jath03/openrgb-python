@@ -123,14 +123,27 @@ you can pass in the actual mode object.
     mobo.set_mode('direct')
     mobo.set_mode(mobo.modes[2])
 
+Saving Modes
+------------
+Some devices support saving their modes so that when you power off the device,
+it will remember its state when it powers back on again.
+
+.. code-block:: python
+
+    mobo.set_mode(3, save=True)
+    mobo.save_mode()
+
+The first option will set a mode then save it, while the dedicated function just
+saves whatever the current mode is.
+
 Resizing Zones
 --------------
-If you have a device with a 35 LED ARGB zone, then you will probably need to
+If you have a device with an ARGB zone, then you will probably need to
 resize it at some point.
 
 .. code-block:: python
 
-    mobo.zones[0].resize(35)
+    mobo.zones[0].resize(35) # For a zone with 35 LEDs
 
 Using Profiles
 --------------

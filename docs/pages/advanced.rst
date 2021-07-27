@@ -28,6 +28,10 @@ that mode.  There are few ways to test this.
     if ModeFlags.HAS_MODE_SPECIFIC_COLOR in mode.flags:
         print("Mode specific color supported")
 
+.. note::
+
+    All of this is checked when you set the mode, so if you try to set an unsupported value, you'll get an appropriate error message.
+
 After you verify that the property that you want to change is supported by the
 mode, you can edit it.  This can be done by directly editing a mode's properties
 
@@ -152,7 +156,7 @@ you need to use a specific protocol version, this is how.
 
     When using a newer SDK client that supports versioning with an older version
     of the OpenRGB server, there will be a 1 second delay on initialization
-    because a timeout has to be exceeded.  
+    because a timeout has to be exceeded.
 
 .. code-block:: python
 
