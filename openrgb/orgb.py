@@ -213,7 +213,7 @@ class Device(utils.RGBContainer):
         if not fast:
             self.update()
 
-    def set_mode(self, mode: Union[int, str, utils.ModeData]):
+    def set_mode(self, mode: Union[int, str, utils.ModeData], save: bool = False):
         '''
         Sets the device's mode
 
@@ -235,6 +235,13 @@ class Device(utils.RGBContainer):
             len(data)
         )
         self.comms.send_data(data)
+        if save:
+            self.comms.send_header(
+                self.id,
+                utils.PacketType.RGBCONTROLLER_SAVEMODE,
+                len(data)
+            )
+            self.comms.send_data(data)
         self.update()
 
     def set_custom_mode(self):
@@ -243,6 +250,18 @@ class Device(utils.RGBContainer):
             utils.PacketType.RGBCONTROLLER_SETCUSTOMMODE,
             0
         )
+
+    def save_mode(self):
+        '''
+        Saves the currently selected mode
+        '''
+        data = self.modes[self.active_mode].pack(self.comms._protocol_version)
+        self.comms.send_header(
+            self.id,
+            utils.PacketType.RGBCONTROLLER_SAVEMODE,
+            len(data)
+        )
+        self.comms.send_data(data)
 
 
 class OpenRGBClient(utils.RGBObject):
