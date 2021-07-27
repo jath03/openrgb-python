@@ -202,6 +202,7 @@ class NetworkClient:
         :param packet_type: A utils.PacketType
         :param packet_size: The full size of the data to be sent after the header
         '''
+        self.check_version(packet_type)
         if self.sock is None:
             raise utils.OpenRGBDisconnected()
 
@@ -241,3 +242,18 @@ class NetworkClient:
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()
             raise utils.OpenRGBDisconnected() from e
+
+    def check_version(self, packet_type: utils.PacketType):
+        '''
+        Verifies that the packet type is supported on the version we are using.
+
+        :param packet_type: What kind of packet is going to be sent
+        :raises utils.SDKVersionError: When a packet is unsupported
+        '''
+        if self._protocol_version < 2 and packet_type in (utils.PacketType.REQUEST_PROFILE_LIST,
+                                                          utils.PacketType.REQUEST_SAVE_PROFILE,
+                                                          utils.PacketType.REQUEST_LOAD_PROFILE,
+                                                          utils.PacketType.REQUEST_DELETE_PROFILE):
+            raise utils.SDKVersionError("Profile controls not supported on protoocl versions < 2.  You probably need to update OpenRGB")
+        elif self._protocol_version < 3 and packet_type == utils.PacketType.RGBCONTROLLER_SAVEMODE:
+            raise utils.SDKVersionError("Saving modes not supported on protoocl versions < 3.  You probably need to update OpenRGB")
