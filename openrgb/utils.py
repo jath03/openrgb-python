@@ -656,12 +656,6 @@ class RGBObject:
         '''
         self.set_color(RGBColor(0, 0, 0))
 
-    def off(self):
-        '''
-        Same as RGBContainer.clear
-        '''
-        self.clear()
-
     def update(self):
         '''
         Gets the current status from the SDK server, ensuring a correct

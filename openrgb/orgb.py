@@ -245,11 +245,17 @@ class Device(utils.RGBContainer):
         self.update()
 
     def set_custom_mode(self):
+        '''
+        Sets the mode to whatever the device supports that provides the most
+        granular control
+        '''
         self.comms.send_header(
             self.id,
             utils.PacketType.RGBCONTROLLER_SETCUSTOMMODE,
             0
         )
+        self.update()
+        self.set_mode(self.active_mode)
 
     def save_mode(self):
         '''
@@ -262,6 +268,13 @@ class Device(utils.RGBContainer):
             len(data)
         )
         self.comms.send_data(data)
+
+    def off(self):
+        '''
+        Turns off device by setting the custom mode and then calling :any:`RGBObject.clear`
+        '''
+        self.set_custom_mode()
+        self.clear()
 
 
 class OpenRGBClient(utils.RGBObject):
