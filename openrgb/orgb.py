@@ -167,51 +167,94 @@ class Device(utils.RGBContainer):
         self.active_mode = data.active_mode
         self.data = data
 
-    def set_color(self, color: utils.RGBColor, start: int = 0, end: int = 0, fast: bool = False):
+    def _set_device_color(self, color: utils.RGBColor, fast: bool = False):
         '''
-        Sets the LEDs' color between start and end
+        Sets the device's color
 
         :param color: the color to set the LED(s) to
-        :param start: the first LED to change
-        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
-        if end == 0:
-            end = len(self.leds)
         self.comms.send_header(
             self.id,
             utils.PacketType.RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(end)}b{(end)}x")
+            struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
         )
-        buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + (color.pack())*(end - start)
+        buff = struct.pack("H", len(self.leds)) + (color.pack())*len(self.leds)
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
 
-    def set_colors(self, colors: list[utils.RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+    def _set_device_colors(self, colors: list[utils.RGBColor], fast: bool = False):
         '''
-        Sets the LEDs' colors between start and end
+        Sets the devices LEDs' colors
 
         :param colors: the list of colors, one per LED
-        :param start: the first LED to change
-        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
-        if end == 0:
-            end = len(self.leds)
-        if len(colors) != (end - start):
+        if len(colors) != len(self.leds):
             raise IndexError("Number of colors doesn't match number of LEDs")
         self.comms.send_header(
             self.id,
             utils.PacketType.RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(end)}b{(end)}x")
+            struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
         )
-        buff = struct.pack("H", end) + b''.join((color.pack() for color in self._colors[:start])) + b''.join((color.pack() for color in colors))
+        buff = struct.pack("H", len(self.leds)) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
+
+    def _set_mode_color(self, color: utils.RGBColor):
+        '''
+        Sets the mode-specific color, if possible
+
+        :param color: the color to set the LED(s) to
+        '''
+        active_mode = self.modes[self.active_mode]
+        assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
+        active_mode.colors = [color]*active_mode.colors_max
+        self.set_mode(active_mode)
+
+    def _set_mode_colors(self, colors: list[utils.RGBColor]):
+        '''
+        Sets the mode-specific color, if possible
+
+        :param color: the color to set the LED(s) to
+        '''
+        active_mode = self.modes[self.active_mode]
+        assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
+        assert active_mode.colors_min <= len(colors) <= active_mode.colors_max
+        active_mode.colors = colors
+        self.set_mode(active_mode)
+
+    def set_color(self, color: utils.RGBColor, fast: bool = False):
+        '''
+        Sets the color of the device whether the current mode is per-led or
+        mode-specific
+
+        :param colors: the list of colors, one per LED
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True` (only applies when not setting a mode-specific color)
+        '''
+        active_mode = self.modes[self.active_mode]
+        if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
+            self._set_mode_color(color)
+        elif active_mode.color_mode == utils.ModeColors.PER_LED:
+            self._set_device_color(color)
+
+    def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
+        '''
+        Sets the colors of the device whether the current mode is per-led or
+        mode-specific
+
+        :param colors: the list of colors, one per LED or per mode-specific color
+        :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True` (only applies when not setting a mode-specific color)
+        '''
+        active_mode = self.modes[self.active_mode]
+        if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
+            self._set_mode_colors(colors)
+        elif active_mode.color_mode == utils.ModeColors.PER_LED:
+            self._set_device_colors(colors)
 
     def set_mode(self, mode: Union[int, str, utils.ModeData], save: bool = False):
         '''
