@@ -624,8 +624,8 @@ class Profile:
     '''
     name: str
 
-    def pack(self) -> bytearray:
-        return bytearray(f"{self.name}\0", 'utf-8')
+    def pack(self) -> bytes:
+        return bytes(f"{self.name}\0", 'utf-8')
 
     @classmethod
     def unpack(cls, data: Iterable[bytes], version: int, *args) -> Profile:

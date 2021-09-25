@@ -89,7 +89,7 @@ class NetworkClient:
 
         :raises utils.OpenRGBDisconnected: when it loses connection to the SDK
         '''
-        if self.sock is None:
+        if not self.connected:
             raise utils.OpenRGBDisconnected()
         header = bytearray(utils.HEADER_SIZE)
         try:
@@ -174,7 +174,7 @@ class NetworkClient:
 
         :param device: the id of the device to request data for
         '''
-        if self.sock is None:
+        if not self.connected:
             raise utils.OpenRGBDisconnected()
         self.send_header(device, utils.PacketType.REQUEST_CONTROLLER_DATA, struct.calcsize('I'))
         self.send_data(struct.pack("I", self._protocol_version), False)
@@ -203,7 +203,7 @@ class NetworkClient:
         :param packet_size: The full size of the data to be sent after the header
         '''
         self.check_version(packet_type)
-        if self.sock is None:
+        if not self.connected:
             raise utils.OpenRGBDisconnected()
 
         if not self.lock.acquire(timeout=10):
@@ -230,7 +230,7 @@ class NetworkClient:
 
         :param data: The data to send
         '''
-        if self.sock is None:
+        if not self.connected:
             raise utils.OpenRGBDisconnected()
         try:
             sent = self.sock.send(data, NOSIGNAL)
@@ -257,3 +257,10 @@ class NetworkClient:
             raise utils.SDKVersionError("Profile controls not supported on protoocl versions < 2.  You probably need to update OpenRGB")
         elif self._protocol_version < 3 and packet_type == utils.PacketType.RGBCONTROLLER_SAVEMODE:
             raise utils.SDKVersionError("Saving modes not supported on protoocl versions < 3.  You probably need to update OpenRGB")
+
+    @property
+    def connected(self) -> bool:
+        '''
+        Returns whether the current instance is currently connected to a server
+        '''
+        return self.sock is not None

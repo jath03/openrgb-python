@@ -332,6 +332,7 @@ class OpenRGBClient(utils.RGBObject):
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
         :param name: the string that will be displayed on the OpenRGB SDK tab's list of clients
+        :param protocol_version: which protocol version to use
         '''
         self.device_num = 0
         self.devices = []
@@ -340,11 +341,7 @@ class OpenRGBClient(utils.RGBObject):
         self.address = address
         self.port = port
         self.name = name
-        self.comms.requestDeviceNum()
-        while any((dev is None for dev in self.devices)):
-            sleep(.1)
-        if self.comms._protocol_version >= 2:
-            self.update_profiles()
+        self.update()
 
     def __repr__(self):
         return f"OpenRGBClient(address={self.address}, port={self.port}, name={self.name})"
@@ -512,6 +509,8 @@ class OpenRGBClient(utils.RGBObject):
         self.comms.requestDeviceNum()
         for x in range(self.device_num):
             self.comms.requestDeviceData(x)
+        if self.comms._protocol_version >= 2:
+            self.update_profiles()
 
     def update_profiles(self):
         '''
