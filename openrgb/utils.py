@@ -76,6 +76,8 @@ class PacketType(IntEnum):
     REQUEST_SAVE_PROFILE = 151
     REQUEST_LOAD_PROFILE = 152
     REQUEST_DELETE_PROFILE = 153
+    REQUEST_PLUGIN_LIST = 200
+    PLUGIN_SPECIFIC = 201
     RGBCONTROLLER_RESIZEZONE = 1000
     RGBCONTROLLER_UPDATELEDS = 1050
     RGBCONTROLLER_UPDATEZONELEDS = 1051
@@ -676,6 +678,42 @@ class Profile:
     def unpack(cls, data: Iterator[int], version: int, *args) -> Profile:
         s = parse_string(data)
         return cls(s)
+
+
+@dataclass
+class Plugin:
+    '''
+
+    '''
+    name: str
+    description: str
+    version: str
+    commit: str
+    url: str
+    id: int
+    sdk_version: int
+
+    def pack(self):
+        pass
+
+    @classmethod
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> Plugin:
+        name = parse_string(data)
+        description = parse_string(data)
+        version = parse_string(data)
+        commit = parse_string(data)
+        url = parse_string(data)
+        id = parse_var('i', data)
+        sdk_version = parse_var('I', data)
+        return cls(
+            name,
+            description,
+            version,
+            commit,
+            url,
+            id,
+            sdk_version
+        )
 
 
 class RGBObject:
