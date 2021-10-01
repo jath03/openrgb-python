@@ -242,7 +242,7 @@ class ModeData:
     color_mode: ModeColors
     colors: list[RGBColor]
 
-    def validate(self):
+    def validate(self, version: int):
         '''
         Tests the values of the mode data and raises a `ValueError` if the validation fails
         '''
@@ -252,7 +252,7 @@ class ModeData:
                 assert self.speed_min <= self.speed <= self.speed_max or self.speed_max <= self.speed <= self.speed_min
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR in self.flags:
                 assert self.colors_min <= len(self.colors) <= self.colors_max
-            if ModeFlags.HAS_BRIGHTNESS in self.flags:
+            if ModeFlags.HAS_BRIGHTNESS in self.flags and version >= 3:
                 assert self.brightness_min <= self.brightness <= self.brightness_max
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Required values invalid or not present") from e
@@ -262,7 +262,7 @@ class ModeData:
                 assert all((i is None for i in (self.speed_max, self.speed_min, self.speed)))
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR not in self.flags:
                 assert all((i is None for i in (self.colors_max, self.colors_min, self.colors)))
-            if ModeFlags.HAS_BRIGHTNESS not in self.flags:
+            if ModeFlags.HAS_BRIGHTNESS not in self.flags or version < 3:
                 assert all((i is None for i in (self.brightness_max, self.brightness_min, self.brightness)))
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Values are set that are not supported by this mode") from e
@@ -273,7 +273,7 @@ class ModeData:
 
         :returns: raw data ready to be sent or saved
         '''
-        self.validate()
+        self.validate(version)
         data = struct.pack("i", self.id)
         data += pack_string(self.name)
         data += struct.pack('i', self.value)
@@ -338,7 +338,7 @@ class ModeData:
             direction = None
         if ModeFlags.HAS_SPEED not in flags:
             speed_min, speed_max, speed = None, None, None
-        if ModeFlags.HAS_BRIGHTNESS not in flags:
+        if ModeFlags.HAS_BRIGHTNESS not in flags or version < 3:
             brightness_min, brightness_max, brightness = None, None, None
 
         for i in range(num_colors):
