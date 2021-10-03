@@ -411,6 +411,8 @@ class OpenRGBClient(utils.RGBObject):
             self.profiles = data
         elif type == utils.PacketType.REQUEST_PLUGIN_LIST:
             self.plugins = [create_plugin(plugin, self.comms) for plugin in data]
+        elif type == utils.PacketType.PLUGIN_SPECIFIC:
+            next(plugin for plugin in self.plugins if plugin.id == device)._recv(data)
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
@@ -580,6 +582,9 @@ class OpenRGBClient(utils.RGBObject):
         Gets the list of enabled plugins from the server.
         '''
         self.comms.requestPluginList()
+        for plugin in self.plugins:
+            if hasattr(plugin, 'update'):
+                plugin.update()
 
     def show(self, fast: bool = False, force: bool = False):
         '''

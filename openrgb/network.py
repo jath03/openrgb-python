@@ -181,6 +181,20 @@ class NetworkClient:
                 finally:
                     self.lock.release()
                 self.callback(device_id, packet_type, utils.parse_list(utils.Plugin, idata, self._protocol_version))
+            elif packet_type == utils.PacketType.PLUGIN_SPECIFIC:
+                try:
+                    data = bytes()
+                    while len(data) < packet_size:
+                        data += self.sock.recv(packet_size - len(data))
+                    idata = iter(data)
+                    for _ in range(4):
+                        next(idata)
+                except utils.CONNECTION_ERRORS as e:
+                    self.stop_connection()
+                    raise utils.OpenRGBDisconnected() from e
+                finally:
+                    self.lock.release()
+                self.callback(device_id, packet_type, idata)
 
     def requestDeviceData(self, device: int):
         '''
@@ -215,7 +229,7 @@ class NetworkClient:
         self.send_header(0, utils.PacketType.REQUEST_PLUGIN_LIST, 0)
         self.read()
 
-    def send_header(self, device_id: int, packet_type: utils.PacketType, packet_size: int):
+    def send_header(self, device_id: int, packet_type: utils.PacketType, packet_size: int, release_lock: bool = True):
         '''
         Sends a header to the SDK
 
@@ -236,11 +250,11 @@ class NetworkClient:
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
-            if packet_size == 0 and packet_type not in (utils.PacketType.REQUEST_CONTROLLER_COUNT,
-                                                        utils.PacketType.REQUEST_CONTROLLER_DATA,
-                                                        utils.PacketType.REQUEST_PROTOCOL_VERSION,
-                                                        utils.PacketType.REQUEST_PROFILE_LIST,
-                                                        utils.PacketType.REQUEST_PLUGIN_LIST):
+            if release_lock and packet_size == 0 and packet_type not in (utils.PacketType.REQUEST_CONTROLLER_COUNT,
+                                                                         utils.PacketType.REQUEST_CONTROLLER_DATA,
+                                                                         utils.PacketType.REQUEST_PROTOCOL_VERSION,
+                                                                         utils.PacketType.REQUEST_PROFILE_LIST,
+                                                                         utils.PacketType.REQUEST_PLUGIN_LIST):
                 self.lock.release()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()

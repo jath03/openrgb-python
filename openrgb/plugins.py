@@ -1,10 +1,15 @@
+from __future__ import annotations
 from openrgb import utils
 from openrgb.network import NetworkClient
+from dataclasses import dataclass
+from typing import Iterable, Optional
+from enum import IntEnum
 import struct
 
 
 class ORGBPlugin:
     version = -1
+    pkt_type_enum = object()
 
     def __init__(self, plugin_data: utils.Plugin, comms: NetworkClient):
         self.name = plugin_data.name
@@ -17,21 +22,72 @@ class ORGBPlugin:
         self.comms = comms
         assert self.sdk_version == self.version
 
-    def send_packet(self, packet_type: int, data: bytes):
-        self.comms.send_header(0, utils.PacketType.PLUGIN_SPECIFIC, len(data) + struct.calcsize('II'))
-        data = struct.pack('II', self.id, packet_type) + data
-        self.comms.send_data(data)
+    def __repr__(self):
+        return type(self).__name__
+
+    def send_packet(self, packet_type: int, data: Optional[bytes] = None, request: bool = False):
+        if not data:
+            data = bytes()
+        self.comms.send_header(self.id, utils.PacketType.PLUGIN_SPECIFIC, len(data) + struct.calcsize('I'), not request)
+        data = struct.pack('I', packet_type) + data
+        self.comms.send_data(data, False)
+
+    def _recv(self, data: Iterable[bytes]):
+        pkt_id = self.pkt_type_enum(utils.parse_var('I', data))
+        self.recv(pkt_id, data)
+
+    def recv(self, pkt_id: IntEnum, data: Iterable[bytes]):
+        # To be implemented per plugin
+        pass
 
 
-class Effects(ORGBPlugin):
+class EffectPacketType(IntEnum):
+    REQUEST_EFFECT_LIST = 0
+    START_EFFECT = 20
+    STOP_EFFECT = 21
+
+
+@dataclass
+class Effect:
+    name: str
+    description: str
+    id: int
+    enabled: bool
+
+    @classmethod
+    def unpack(cls, data: Iterable[bytes], version: int, *args) -> Effect:
+        name = utils.parse_string(data)
+        description = utils.parse_string(data)
+        id = utils.parse_var('i', data)
+        enabled = utils.parse_var('?', data)
+
+        return cls(
+            name,
+            description,
+            id,
+            enabled
+        )
+
+
+class EffectsPlugin(ORGBPlugin):
     version = 1
+    pkt_type_enum = EffectPacketType
 
-    def get_effects(self):
-        self.send_packet(1, bytes(b'hi'))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.effects = []
+
+    def update(self):
+        self.send_packet(EffectPacketType.REQUEST_EFFECT_LIST, request=True)
+        self.comms.read()
+
+    def recv(self, pkt_id: EffectPacketType, data: Iterable[bytes]):
+        if pkt_id == EffectPacketType.REQUEST_EFFECT_LIST:
+            self.effects = utils.parse_list(Effect, data, self.version)
 
 
 PLUGIN_NAMES = {
-    "OpenRGB Effects Plugin": Effects
+    "OpenRGB Effects Plugin": EffectsPlugin
 }
 
 
