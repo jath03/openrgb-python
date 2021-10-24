@@ -254,7 +254,8 @@ class NetworkClient:
                                                                          utils.PacketType.REQUEST_CONTROLLER_DATA,
                                                                          utils.PacketType.REQUEST_PROTOCOL_VERSION,
                                                                          utils.PacketType.REQUEST_PROFILE_LIST,
-                                                                         utils.PacketType.REQUEST_PLUGIN_LIST):
+                                                                         utils.PacketType.REQUEST_PLUGIN_LIST,
+                                                                         utils.PacketType.PLUGIN_SPECIFIC):
                 self.lock.release()
         except utils.CONNECTION_ERRORS as e:
             self.stop_connection()

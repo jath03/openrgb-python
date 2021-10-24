@@ -2,7 +2,7 @@ from __future__ import annotations
 from openrgb import utils
 from openrgb.network import NetworkClient
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 from enum import IntEnum
 import struct
 
@@ -84,6 +84,32 @@ class EffectsPlugin(ORGBPlugin):
     def recv(self, pkt_id: EffectPacketType, data: Iterable[bytes]):
         if pkt_id == EffectPacketType.REQUEST_EFFECT_LIST:
             self.effects = utils.parse_list(Effect, data, self.version)
+
+    def start_effect(self, effect: Union[int, str, Effect]):
+        if type(effect) == int:
+            effect = self.effects[effect]
+        elif type(effect) == str:
+            try:
+                effect = next(m for m in self.effects if m.name.lower() == effect.lower())
+            except StopIteration as e:
+                raise ValueError(f"Effect `{effect}` not found") from e
+        data = utils.pack_string(effect.name)
+
+        self.send_packet(EffectPacketType.START_EFFECT, data)
+        self.comms.read()
+
+    def stop_effect(self, effect: Union[int, str, Effect]):
+        if type(effect) == int:
+            effect = self.effects[effect]
+        elif type(effect) == str:
+            try:
+                effect = next(m for m in self.effects if m.name.lower() == effect.lower())
+            except StopIteration as e:
+                raise ValueError(f"Effect `{effect}` not found") from e
+        data = utils.pack_string(effect.name)
+
+        self.send_packet(EffectPacketType.STOP_EFFECT, data)
+        self.comms.read()
 
 
 PLUGIN_NAMES = {
