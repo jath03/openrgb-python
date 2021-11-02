@@ -62,7 +62,7 @@ class Zone(utils.RGBContainer):
             self.leds = [None for led in data.leds]
         for x in range(len(data.leds)):
             if self.leds[x] is None:
-                self.leds[x] = LED(data.leds[x], data.colors[x], x, self.device_id, self.comms)
+                self.leds[x] = LED(data.leds[x], data.colors[x], data.start_idx + x, self.device_id, self.comms)
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
         self.mat_width = data.mat_width
