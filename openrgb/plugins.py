@@ -51,20 +51,17 @@ class EffectPacketType(IntEnum):
 class Effect:
     name: str
     description: str
-    id: int
     enabled: bool
 
     @classmethod
     def unpack(cls, data: Iterable[bytes], version: int, *args) -> Effect:
         name = utils.parse_string(data)
         description = utils.parse_string(data)
-        id = utils.parse_var('i', data)
         enabled = utils.parse_var('?', data)
 
         return cls(
             name,
             description,
-            id,
             enabled
         )
 
