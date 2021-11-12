@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum, IntFlag
-from typing import BinaryIO, Any, Iterable, Optional
+from typing import BinaryIO, Any, Iterator, Optional
 from dataclasses import dataclass
 import struct
 import colorsys
@@ -94,18 +94,18 @@ class ControllerParsingError(ValueError):
     pass
 
 
-def parse_var(type: str, data: Iterable[bytes]) -> Any:
+def parse_var(type: str, data: Iterator[int]) -> Any:
     size = struct.calcsize(type)
     d = []
     for _ in range(size):
-        d.append(next(data))
+        d.append(int(next(data)))
     try:
         return struct.unpack(type, bytes(d))[0]
     except IndexError:
         return
 
 
-def parse_string(data: Iterable[bytes]) -> str:
+def parse_string(data: Iterator[int]) -> str:
     '''
     Parses a string based on a size.
 
@@ -127,7 +127,7 @@ def pack_string(string: str) -> bytes:
     return struct.pack(f"H{num}s", num + 1, string.encode('ascii')) + b'\x00'
 
 
-def parse_list(kind: object, data: Iterable[bytes], version: int) -> list:
+def parse_list(kind: object, data: Iterator[int], version: int) -> list:
     '''
     Parses a list of objects and returns them
 
@@ -138,11 +138,11 @@ def parse_list(kind: object, data: Iterable[bytes], version: int) -> list:
     length = parse_var('H', data)
     things = []
     for x in range(length):
-        things.append(kind.unpack(data, version, x))
+        things.append(kind.unpack(data, version, x))  # type: ignore
     return things
 
 
-def pack_list(things: list, version: int) -> bytearray:
+def pack_list(things: list, version: int) -> bytes:
     '''
     Packs a list of things using the things' .pack() methods
 
@@ -158,16 +158,16 @@ class RGBColor:
     green: int
     blue: int
 
-    def pack(self, version: int = 0) -> bytearray:
+    def pack(self, version: int = 0) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
         return struct.pack("BBBx", self.red, self.green, self.blue)
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> RGBColor:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> RGBColor:
         '''
         Unpacks an RGBColor object from bytes
 
@@ -199,9 +199,9 @@ class LEDData:
     name: str
     value: int
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
@@ -211,7 +211,7 @@ class LEDData:
         )
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> LEDData:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> LEDData:
         '''
         Creates a new LEDData object from raw bytes
 
@@ -229,18 +229,18 @@ class ModeData:
     name: str
     value: int
     flags: ModeFlags
-    speed_min: int
-    speed_max: int
-    brightness_min: int
-    brightness_max: int
-    colors_min: int
-    colors_max: int
+    speed_min: Optional[int]
+    speed_max: Optional[int]
+    brightness_min: Optional[int]
+    brightness_max: Optional[int]
+    colors_min: Optional[int]
+    colors_max: Optional[int]
 
-    speed: int
-    brightness: int
-    direction: ModeDirections
+    speed: Optional[int]
+    brightness: Optional[int]
+    direction: Optional[ModeDirections]
     color_mode: ModeColors
-    colors: list[RGBColor]
+    colors: Optional[list[RGBColor]]
 
     def validate(self, version: int):
         '''
@@ -249,11 +249,11 @@ class ModeData:
         try:
             if ModeFlags.HAS_SPEED in self.flags:
                 assert self.speed is not None
-                assert self.speed_min <= self.speed <= self.speed_max or self.speed_max <= self.speed <= self.speed_min
+                assert self.speed_min <= self.speed <= self.speed_max or self.speed_max <= self.speed <= self.speed_min  # type: ignore
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR in self.flags:
-                assert self.colors_min <= len(self.colors) <= self.colors_max
+                assert self.colors_min <= len(self.colors) <= self.colors_max  # type: ignore
             if ModeFlags.HAS_BRIGHTNESS in self.flags and version >= 3:
-                assert self.brightness_min <= self.brightness <= self.brightness_max
+                assert self.brightness_min <= self.brightness <= self.brightness_max  # type: ignore
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Required values invalid or not present") from e
 
@@ -269,7 +269,7 @@ class ModeData:
 
     def pack(self, version: int) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
@@ -296,7 +296,7 @@ class ModeData:
         return data
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, index: int = 0) -> ModeData:
+    def unpack(cls, data: Iterator[int], version: int, index: int = 0) -> ModeData:
         '''
         Creates a new ModeData object from raw bytes
 
@@ -345,7 +345,7 @@ class ModeData:
             color = RGBColor.unpack(data, version)
             colors.append(color)
         if num_colors == 0:
-            colors, colors_min, colors_max = None, None, None
+            colors, colors_min, colors_max = None, None, None  # type: ignore
 
         return cls(
             index,
@@ -375,14 +375,14 @@ class ZoneData:
     num_leds: int
     mat_height: Optional[int]
     mat_width: Optional[int]
-    matrix_map: Optional[list[list[int]]] = None
-    leds: list[LEDData] = None
-    colors: list[RGBColor] = None
-    start_idx: int = None
+    matrix_map: Optional[list[list[Optional[int]]]] = None
+    leds: list[LEDData] = []
+    colors: list[RGBColor] = []
+    start_idx: int = 0
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
@@ -396,9 +396,9 @@ class ZoneData:
                 self.num_leds
             )
         )
-        if self.mat_height > 0 and self.mat_width > 0:
-            flat = [i for li in self.matrix_map for i in li]
-            assert len(flat) == (self.mat_width * self.mat_height)
+        if self.mat_height > 0 and self.mat_width > 0:  # type: ignore
+            flat = [i for li in self.matrix_map for i in li]  # type: ignore
+            assert len(flat) == (self.mat_width * self.mat_height)  # type: ignore
             data += struct.pack(
                 f"HII{len(flat)}I",
                 len(flat),
@@ -411,7 +411,7 @@ class ZoneData:
         return data
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> ZoneData:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> ZoneData:
         '''
         Unpacks the raw data into a ZoneData object
 
@@ -427,7 +427,7 @@ class ZoneData:
         if zone_type == ZoneType.MATRIX:
             height = parse_var('I', data)
             width = parse_var('I', data)
-            matrix = [[] for x in range(height)]
+            matrix: list[list[Optional[int]]] = [[] for x in range(height)]
             for y in range(height):
                 for _ in range(width):
                     matrix[y].append(parse_var('I', data))
@@ -435,7 +435,7 @@ class ZoneData:
                 matrix[idx] = [x if x != 0xFFFFFFFF else None for x in row]
         else:
             height, width = None, None
-            matrix = None
+            matrix = None  # type: ignore
         return cls(
             name,
             zone_type,
@@ -450,15 +450,15 @@ class ZoneData:
 
 @dataclass
 class MetaData:
-    vendor: str
+    vendor: Optional[str]
     description: str
     version: str
     serial: str
     location: str
 
-    def pack(self, version: int) -> bytearray:
+    def pack(self, version: int) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
@@ -469,11 +469,11 @@ class MetaData:
             + pack_string(self.location)
         )
         if version >= 1:
-            buff = pack_string(self.vendor) + buff
+            buff = pack_string(self.vendor) + buff  # type: ignore
         return buff
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> MetaData:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> MetaData:
         '''
         Unpacks the raw data into a MetaData object
 
@@ -481,18 +481,18 @@ class MetaData:
         :param start: What place in the data object to start
         '''
         if version >= 1:
-            vendor = parse_string(data)
+            vendor: Optional[str] = parse_string(data)
         else:
             vendor = None
         description = parse_string(data)
-        version = parse_string(data)
+        fw_version = parse_string(data)
         serial = parse_string(data)
         location = parse_string(data)
 
         return cls(
             vendor,
             description,
-            version,
+            fw_version,
             serial,
             location
         )
@@ -511,7 +511,7 @@ class ControllerData:
 
     def pack(self, version: int) -> bytes:
         '''
-        Packs itself into a bytearray ready to be sent to the SDK or saved in a profile
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
 
         :returns: raw data ready to be sent or saved
         '''
@@ -590,8 +590,8 @@ class LocalProfile:
     '''
     controllers: list[ControllerData]
 
-    def pack(self) -> bytearray:
-        data = bytearray()
+    def pack(self) -> bytes:
+        data = bytes()
         data += struct.pack("16sI", b'OPENRGB_PROFILE\x00', 1)
         for dev in self.controllers:
             data += dev.pack(0)
@@ -628,7 +628,7 @@ class Profile:
         return bytes(f"{self.name}\0", 'utf-8')
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> Profile:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> Profile:
         s = parse_string(data)
         return cls(s)
 
@@ -642,7 +642,7 @@ class RGBObject:
     def __repr__(self):
         return f"{type(self).__name__}(name={self.name}, id={self.id})"
 
-    def set_color(self, color: RGBColor, start: int = 0, end: int = 0, fast: bool = False):
+    def set_color(self, color: RGBColor, fast: bool = False):
         '''
         Sets the color
 
@@ -670,7 +670,12 @@ class RGBContainer(RGBObject):
     :any:`Device` class or the :any:`Zone` class.
     '''
 
-    def set_colors(self, colors: list[RGBColor], start: int = 0, end: int = 0, fast: bool = False):
+    def __init__(self):
+        self.colors: list[RGBColor] = []
+        self._colors: list[RGBColor] = []
+        self.leds: list = []
+
+    def set_colors(self, colors: list[RGBColor], fast: bool = False):
         '''
         Sets mutliple colors
 
@@ -697,9 +702,7 @@ class RGBContainer(RGBObject):
         elif len(changed) == 1:
             self.leds[changed[0][0]].set_color(changed[0][1], fast=True)
         elif len(changed) > 1:
-            start, end = changed[0][0], changed[-1][0] + 1
-            colors = self.colors[start:end]
-            self.set_colors(colors, start, end, fast=True)
+            self.set_colors(self.colors, fast=True)
         self._colors = self.colors[:]
         if not fast:
             self.update()

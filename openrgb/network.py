@@ -9,7 +9,7 @@ from typing import Callable
 OPENRGB_PROTOCOL_VERSION = 3
 
 if platform.system() == "Linux":
-    NOSIGNAL = socket.MSG_NOSIGNAL
+    NOSIGNAL: int = socket.MSG_NOSIGNAL
 else:
     NOSIGNAL = 0
 
@@ -91,7 +91,7 @@ class NetworkClient:
         '''
         if not self.connected:
             raise utils.OpenRGBDisconnected()
-        header = bytearray(utils.HEADER_SIZE)
+        header = bytes(utils.HEADER_SIZE)
         try:
             self.sock.recv_into(header)
         except utils.CONNECTION_ERRORS as e:
@@ -194,7 +194,7 @@ class NetworkClient:
         self.send_header(0, utils.PacketType.REQUEST_PROFILE_LIST, 0)
         self.read()
 
-    def send_header(self, device_id: int, packet_type: int, packet_size: int):
+    def send_header(self, device_id: int, packet_type: utils.PacketType, packet_size: int):
         '''
         Sends a header to the SDK
 
@@ -211,7 +211,7 @@ class NetworkClient:
 
         try:
             data = struct.pack('ccccIII', b'O', b'R', b'G', b'B', device_id, packet_type, packet_size)
-            sent = self.sock.send(data, NOSIGNAL)
+            sent = self.sock.send(data, NOSIGNAL)  # type: ignore
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
@@ -233,7 +233,7 @@ class NetworkClient:
         if not self.connected:
             raise utils.OpenRGBDisconnected()
         try:
-            sent = self.sock.send(data, NOSIGNAL)
+            sent = self.sock.send(data, NOSIGNAL)  # type: ignore
             if sent != len(data):
                 self.stop_connection()
                 raise utils.OpenRGBDisconnected()
