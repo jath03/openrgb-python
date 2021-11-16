@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import IntEnum, IntFlag
 from typing import BinaryIO, Any, Iterator, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import struct
 import colorsys
 import socket
@@ -376,8 +376,8 @@ class ZoneData:
     mat_height: Optional[int]
     mat_width: Optional[int]
     matrix_map: Optional[list[list[Optional[int]]]] = None
-    leds: list[LEDData] = []
-    colors: list[RGBColor] = []
+    leds: list[LEDData] = field(default_factory=list)
+    colors: list[RGBColor] = field(default_factory=list)
     start_idx: int = 0
 
     def pack(self, version: int) -> bytes:
