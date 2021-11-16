@@ -91,7 +91,7 @@ class NetworkClient:
         '''
         if not self.connected:
             raise utils.OpenRGBDisconnected()
-        header = bytes(utils.HEADER_SIZE)
+        header = bytearray(utils.HEADER_SIZE)
         try:
             self.sock.recv_into(header)
         except utils.CONNECTION_ERRORS as e:
