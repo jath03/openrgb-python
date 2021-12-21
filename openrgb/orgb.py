@@ -72,11 +72,9 @@ class Zone(utils.RGBContainer):
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
-        Sets the LEDs' color in the zone between start and end
+        Sets the zone's color
 
         :param color: the color to set the LEDs to
-        :param start: the first LED to change
-        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         self.comms.send_header(
@@ -84,28 +82,27 @@ class Zone(utils.RGBContainer):
             utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
             struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
         )
-        buff = struct.pack("H", len(self.leds)) + (color.pack())*len(self.leds)
+        buff = struct.pack("iH", self.id, len(self.leds)) + (color.pack())*len(self.leds)
         buff = struct.pack("I", len(buff)) + buff
+        self.comms.send_data(buff)
         if not fast:
             self.update()
 
     def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
         '''
-        Sets the LEDs' colors in the zone between start and end
+        Sets the LEDs' colors in the zone
 
         :param colors: the list of colors, one per LED
-        :param start: the first LED to change
-        :param end: the first unchanged LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
         '''
         if len(colors) != len(self.leds):
-            raise IndexError("Number of colors doesn't match number of LEDs")
+            raise IndexError("Number of colors doesn't match number of LEDs in the zone")
         self.comms.send_header(
             self.device_id,
             utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
             struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
         )
-        buff = struct.pack("H", len(self.leds)) + b''.join((color.pack() for color in colors))
+        buff = struct.pack("iH", self.id, len(self.leds)) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
         self.comms.send_data(buff)
         if not fast:
