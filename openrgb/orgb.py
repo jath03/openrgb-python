@@ -233,7 +233,7 @@ class Device(utils.RGBContainer):
         if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
             self._set_mode_color(color)
         elif active_mode.color_mode == utils.ModeColors.PER_LED:
-            self._set_device_color(color)
+            self._set_device_color(color, fast)
 
     def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
         '''
@@ -247,7 +247,7 @@ class Device(utils.RGBContainer):
         if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
             self._set_mode_colors(colors)
         elif active_mode.color_mode == utils.ModeColors.PER_LED:
-            self._set_device_colors(colors)
+            self._set_device_colors(colors, fast)
 
     def set_mode(self, mode: Union[int, str, utils.ModeData], save: bool = False):
         '''
