@@ -80,7 +80,7 @@ class Zone(utils.RGBContainer):
         self.comms.send_header(
             self.device_id,
             utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
-            struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
+            struct.calcsize(f"iIH{3*(len(self.leds))}b{len(self.leds)}x")
         )
         buff = struct.pack("iH", self.id, len(self.leds)) + (color.pack())*len(self.leds)
         buff = struct.pack("I", len(buff)) + buff
@@ -100,7 +100,7 @@ class Zone(utils.RGBContainer):
         self.comms.send_header(
             self.device_id,
             utils.PacketType.RGBCONTROLLER_UPDATEZONELEDS,
-            struct.calcsize(f"IIH{3*(len(self.leds))}b{len(self.leds)}x")
+            struct.calcsize(f"iIH{3*(len(self.leds))}b{len(self.leds)}x")
         )
         buff = struct.pack("iH", self.id, len(self.leds)) + b''.join((color.pack() for color in colors))
         buff = struct.pack("I", len(buff)) + buff
