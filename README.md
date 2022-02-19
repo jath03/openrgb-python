@@ -39,8 +39,9 @@ For a more stable package:
 
 `pip3 install openrgb-python`
 
-Arch Linux:
-`yay -S python-openrgb`
+~~Arch Linux:
+`yay -S python-openrgb`~~
+This AUR package is out of date. Use `python-openrgb-git` instead.
 
 Thanks to @GabMus for the AUR packages
 
