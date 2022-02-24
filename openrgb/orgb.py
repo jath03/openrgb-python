@@ -42,6 +42,30 @@ class LED(utils.RGBObject):
             self.update()
 
 
+class Segment(utils.RGBContainer):
+    '''
+    A class to represent a segment
+    '''
+
+    def __init__(self, data: utils.SegmentData, parent: Zone):
+        self.leds = [None for _ in range(data.leds_count)]
+        self.parent_zone = parent
+
+    def _update(self, data: utils.SegmentData):
+        self.name = data.name
+        self.type = data.segment_type
+        self.start_idx = data.start_idx
+        self.leds_count = data.leds_count
+        self.leds = self.parent_zone.leds[data.start_idx:data.start_idx + data.leds_count]
+
+    def set_color(self, color: utils.RGBColor, fast: bool = False):
+        self.set_colors([color] * self.leds_count, fast)
+
+    def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
+        new_colors = self.parent_zone.colors[:self.start_idx] + colors + self.parent_zone.colors[self.start_idx + self.leds_count:]
+        self.parent_zone.set_colors(new_colors, fast)
+
+
 class Zone(utils.RGBContainer):
     '''
     A class to represent a zone
@@ -49,6 +73,7 @@ class Zone(utils.RGBContainer):
 
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.leds = [None for led in data.leds]
+        self.segments = [None for _ in data.segments]
         self.device_id = device_id
         self.comms = network_client
         self.id = zone_id
@@ -64,6 +89,9 @@ class Zone(utils.RGBContainer):
                 self.leds[x] = LED(data.leds[x], data.colors[x], data.start_idx + x, self.device_id, self.comms)
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
+        for x in range(len(data.segments)):
+            if self.segments[x] is None:
+                self.segments[x] = Segment(data.segments[x], self)
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map

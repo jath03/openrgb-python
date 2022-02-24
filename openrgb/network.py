@@ -6,7 +6,7 @@ import threading
 from openrgb import utils
 from typing import Callable
 
-OPENRGB_PROTOCOL_VERSION = 3
+OPENRGB_PROTOCOL_VERSION = 4
 
 if platform.system() == "Linux":
     NOSIGNAL: int = socket.MSG_NOSIGNAL
