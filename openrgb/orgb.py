@@ -50,6 +50,7 @@ class Segment(utils.RGBContainer):
     def __init__(self, data: utils.SegmentData, parent: Zone):
         self.leds = [None for _ in range(data.leds_count)]
         self.parent_zone = parent
+        self._update(data)
 
     def _update(self, data: utils.SegmentData):
         self.name = data.name
@@ -73,7 +74,10 @@ class Zone(utils.RGBContainer):
 
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.leds = [None for led in data.leds]
-        self.segments = [None for _ in data.segments]
+        try:
+            self.segments = [None for _ in data.segments]
+        except TypeError:
+            self.segments = None
         self.device_id = device_id
         self.comms = network_client
         self.id = zone_id
@@ -89,9 +93,12 @@ class Zone(utils.RGBContainer):
                 self.leds[x] = LED(data.leds[x], data.colors[x], data.start_idx + x, self.device_id, self.comms)
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
-        for x in range(len(data.segments)):
-            if self.segments[x] is None:
-                self.segments[x] = Segment(data.segments[x], self)
+        if self.segments:
+            for x in range(len(data.segments)):
+                if self.segments[x] is None:
+                    self.segments[x] = Segment(data.segments[x], self)
+                else:
+                    self.segments[x]._update(data.segments[x])
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map
