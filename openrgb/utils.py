@@ -55,7 +55,8 @@ class DeviceType(IntEnum):
     SPEAKER = 12
     VIRTUAL = 13
     STORAGE = 14
-    UNKNOWN = 15
+    CASE = 15
+    UNKNOWN = 16
 
 
 class ZoneType(IntEnum):
