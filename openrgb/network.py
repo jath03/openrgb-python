@@ -254,9 +254,9 @@ class NetworkClient:
                                                           utils.PacketType.REQUEST_SAVE_PROFILE,
                                                           utils.PacketType.REQUEST_LOAD_PROFILE,
                                                           utils.PacketType.REQUEST_DELETE_PROFILE):
-            raise utils.SDKVersionError("Profile controls not supported on protoocl versions < 2.  You probably need to update OpenRGB")
+            raise utils.SDKVersionError("Profile controls not supported on protocol versions < 2.  You probably need to update OpenRGB")
         elif self._protocol_version < 3 and packet_type == utils.PacketType.RGBCONTROLLER_SAVEMODE:
-            raise utils.SDKVersionError("Saving modes not supported on protoocl versions < 3.  You probably need to update OpenRGB")
+            raise utils.SDKVersionError("Saving modes not supported on protocol versions < 3.  You probably need to update OpenRGB")
 
     @property
     def connected(self) -> bool:
