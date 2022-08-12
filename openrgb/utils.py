@@ -688,8 +688,6 @@ class Plugin:
     name: str
     description: str
     version: str
-    commit: str
-    url: str
     id: int
     sdk_version: int
 
@@ -701,16 +699,12 @@ class Plugin:
         name = parse_string(data)
         description = parse_string(data)
         version = parse_string(data)
-        commit = parse_string(data)
-        url = parse_string(data)
         id = parse_var('i', data)
         sdk_version = parse_var('I', data)
         return cls(
             name,
             description,
             version,
-            commit,
-            url,
             id,
             sdk_version
         )
