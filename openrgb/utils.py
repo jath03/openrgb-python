@@ -698,13 +698,13 @@ class Plugin:
     def unpack(cls, data: Iterable[bytes], version: int, *args) -> Plugin:
         name = parse_string(data)
         description = parse_string(data)
-        version = parse_string(data)
+        version_str = parse_string(data)
         id = parse_var('i', data)
         sdk_version = parse_var('I', data)
         return cls(
             name,
             description,
-            version,
+            version_str,
             id,
             sdk_version
         )

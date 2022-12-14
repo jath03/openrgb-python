@@ -15,8 +15,6 @@ class ORGBPlugin:
         self.name = plugin_data.name
         self.description = plugin_data.description
         self.plugin_version = plugin_data.version
-        self.commit = plugin_data.commit
-        self.url = plugin_data.url
         self.id = plugin_data.id
         self.sdk_version = plugin_data.sdk_version
         self.comms = comms
@@ -30,7 +28,7 @@ class ORGBPlugin:
             data = bytes()
         self.comms.send_header(self.id, utils.PacketType.PLUGIN_SPECIFIC, len(data) + struct.calcsize('I'), not request)
         data = struct.pack('I', packet_type) + data
-        self.comms.send_data(data, False)
+        self.comms.send_data(data, not request)
 
     def _recv(self, data: Iterable[bytes]):
         pkt_id = self.pkt_type_enum(utils.parse_var('I', data))
@@ -93,7 +91,6 @@ class EffectsPlugin(ORGBPlugin):
         data = utils.pack_string(effect.name)
 
         self.send_packet(EffectPacketType.START_EFFECT, data)
-        self.comms.read()
 
     def stop_effect(self, effect: Union[int, str, Effect]):
         if type(effect) == int:
@@ -106,7 +103,6 @@ class EffectsPlugin(ORGBPlugin):
         data = utils.pack_string(effect.name)
 
         self.send_packet(EffectPacketType.STOP_EFFECT, data)
-        self.comms.read()
 
 
 PLUGIN_NAMES = {
