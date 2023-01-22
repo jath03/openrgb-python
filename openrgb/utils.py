@@ -695,7 +695,7 @@ class Plugin:
         pass
 
     @classmethod
-    def unpack(cls, data: Iterable[bytes], version: int, *args) -> Plugin:
+    def unpack(cls, data: Iterator[int], version: int, *args) -> Plugin:
         name = parse_string(data)
         description = parse_string(data)
         version_str = parse_string(data)
