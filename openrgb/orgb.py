@@ -42,6 +42,32 @@ class LED(utils.RGBObject):
             self.update()
 
 
+class Segment(utils.RGBContainer):
+    '''
+    A class to represent a segment
+    '''
+
+    def __init__(self, data: utils.SegmentData, id: int, parent: Zone):
+        self.leds = [None for _ in range(data.leds_count)]
+        self.id = id
+        self.parent_zone = parent
+        self._update(data)
+
+    def _update(self, data: utils.SegmentData):
+        self.name = data.name
+        self.type = data.segment_type
+        self.start_idx = data.start_idx
+        self.leds_count = data.leds_count
+        self.leds = self.parent_zone.leds[data.start_idx:data.start_idx + data.leds_count]
+
+    def set_color(self, color: utils.RGBColor, fast: bool = False):
+        self.set_colors([color] * self.leds_count, fast)
+
+    def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
+        new_colors = self.parent_zone.colors[:self.start_idx] + colors + self.parent_zone.colors[self.start_idx + self.leds_count:]
+        self.parent_zone.set_colors(new_colors, fast)
+
+
 class Zone(utils.RGBContainer):
     '''
     A class to represent a zone
@@ -49,6 +75,10 @@ class Zone(utils.RGBContainer):
 
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.leds = [None for led in data.leds]
+        try:
+            self.segments = [None for _ in data.segments]
+        except TypeError:
+            self.segments = None
         self.device_id = device_id
         self.comms = network_client
         self.id = zone_id
@@ -65,6 +95,12 @@ class Zone(utils.RGBContainer):
                                    data.start_idx + x, self.device_id, self.comms)
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
+        if self.segments:
+            for x in range(len(data.segments)):
+                if self.segments[x] is None:
+                    self.segments[x] = Segment(data.segments[x], x, self)
+                else:
+                    self.segments[x]._update(data.segments[x])
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map

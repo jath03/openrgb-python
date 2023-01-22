@@ -219,7 +219,6 @@ class LEDData:
         Creates a new LEDData object from raw bytes
 
         :param data: the raw bytes from the SDK
-        :param start: what place in the data object to start
         '''
         name = parse_string(data)
         value = parse_var('I', data)
@@ -304,7 +303,6 @@ class ModeData:
         Creates a new ModeData object from raw bytes
 
         :param data: the raw bytes from the SDK
-        :param start: what place in the data object to start
         :param index: which mode this is
         '''
         name = parse_string(data)
@@ -370,6 +368,42 @@ class ModeData:
 
 
 @dataclass
+class SegmentData:
+    name: str
+    segment_type: ZoneType
+    start_idx: int
+    leds_count: int
+
+    def pack(self, version: int) -> bytes:
+        '''
+        Packs itself into a bytes ready to be sent to the SDK or saved in a profile
+
+        :returns: raw data ready to be sent or saved
+        '''
+        data = pack_string(self.name)
+        data += struct.pack("iII", self.segment_type, self.start_idx, self.leds_count)
+        return data
+
+    @classmethod
+    def unpack(cls, data: Iterator[int], version: int, *args) -> SegmentData:
+        '''
+        Unpacks the raw data into a SegmentData object
+
+        :param data: The raw byte data to unpack
+        '''
+        name = parse_string(data)
+        segment_type = ZoneType(parse_var("i", data))
+        start_idx = parse_var("I", data)
+        leds_count = parse_var("I", data)
+        return cls(
+            name,
+            segment_type,
+            start_idx,
+            leds_count
+        )
+
+
+@dataclass
 class ZoneData:
     name: str
     zone_type: ZoneType
@@ -379,6 +413,7 @@ class ZoneData:
     mat_height: Optional[int]
     mat_width: Optional[int]
     matrix_map: Optional[list[list[Optional[int]]]] = None
+    segments: Optional[list[SegmentData]] = None
     leds: list[LEDData] = field(default_factory=list)
     colors: list[RGBColor] = field(default_factory=list)
     start_idx: int = 0
@@ -411,6 +446,9 @@ class ZoneData:
             )
         else:
             data += struct.pack("H", 0)
+
+        if version >= 4:
+            data += pack_list(self.segments, version)
         return data
 
     @classmethod
@@ -419,7 +457,6 @@ class ZoneData:
         Unpacks the raw data into a ZoneData object
 
         :param data: The raw byte data to unpack
-        :param start: What place in the data object to start
         '''
         name = parse_string(data)
         zone_type = ZoneType(parse_var('i', data))
@@ -439,6 +476,11 @@ class ZoneData:
         else:
             height, width = None, None
             matrix = None  # type: ignore
+
+        if version >= 4:
+            segments = parse_list(SegmentData, data, version)
+        else:
+            segments = None
         return cls(
             name,
             zone_type,
@@ -447,7 +489,8 @@ class ZoneData:
             num_leds,
             height,
             width,
-            matrix
+            matrix,
+            segments
         )
 
 
@@ -481,7 +524,6 @@ class MetaData:
         Unpacks the raw data into a MetaData object
 
         :param data: The raw byte data to unpack
-        :param start: What place in the data object to start
         '''
         if version >= 1:
             vendor: Optional[str] = parse_string(data)
