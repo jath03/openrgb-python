@@ -4,7 +4,7 @@ import socket
 import struct
 import threading
 from openrgb import utils
-from typing import Callable
+from typing import Callable, Optional
 
 OPENRGB_PROTOCOL_VERSION = 4
 
@@ -19,7 +19,7 @@ class NetworkClient:
     A class for interfacing with the OpenRGB SDK
     '''
 
-    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: int = None):
+    def __init__(self, update_callback: Callable, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: Optional[int] = None):
         '''
         :param update_callback: the function to call when data is received
         :param address: the ip address of the SDK server

@@ -448,7 +448,7 @@ class ZoneData:
             data += struct.pack("H", 0)
 
         if version >= 4:
-            data += pack_list(self.segments, version)
+            data += pack_list(self.segments, version)  # type: ignore
         return data
 
     @classmethod

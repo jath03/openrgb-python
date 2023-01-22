@@ -2,7 +2,7 @@ from __future__ import annotations
 import struct
 import platform
 from openrgb import utils
-from typing import Union, Any
+from typing import Union, Any, Optional
 from openrgb.network import NetworkClient
 # from dataclasses import dataclass
 from os import environ
@@ -76,7 +76,7 @@ class Zone(utils.RGBContainer):
     def __init__(self, data: utils.ZoneData, zone_id: int, device_id: int, network_client: NetworkClient):
         self.leds = [None for led in data.leds]
         try:
-            self.segments = [None for _ in data.segments]
+            self.segments: Optional[list[Segment]] = [None for _ in data.segments]  # type: ignore
         except TypeError:
             self.segments = None
         self.device_id = device_id
@@ -96,11 +96,11 @@ class Zone(utils.RGBContainer):
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
         if self.segments:
-            for x in range(len(data.segments)):
+            for x in range(len(data.segments)):  # type: ignore
                 if self.segments[x] is None:
-                    self.segments[x] = Segment(data.segments[x], x, self)
+                    self.segments[x] = Segment(data.segments[x], x, self)  # type: ignore
                 else:
-                    self.segments[x]._update(data.segments[x])
+                    self.segments[x]._update(data.segments[x])  # type: ignore
         self.mat_width = data.mat_width
         self.mat_height = data.mat_height
         self.matrix_map = data.matrix_map
@@ -260,8 +260,8 @@ class Device(utils.RGBContainer):
         active_mode = self.modes[self.active_mode]
         assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
         assert active_mode.colors is not None
-        assert active_mode.colors_min <= len(
-            colors) <= active_mode.colors_max  # type: ignore
+        assert active_mode.colors_min <= len(  # type: ignore
+            colors) <= active_mode.colors_max
         active_mode.colors = colors
         self.set_mode(active_mode)
 
@@ -366,7 +366,7 @@ class OpenRGBClient(utils.RGBObject):
     Devices, Zones, and LEDs for you.
     '''
 
-    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: int = None):
+    def __init__(self, address: str = "127.0.0.1", port: int = 6742, name: str = "openrgb-python", protocol_version: Optional[int] = None):
         '''
         :param address: the ip address of the SDK server
         :param port: the port of the SDK server
@@ -390,8 +390,8 @@ class OpenRGBClient(utils.RGBObject):
         if type == utils.PacketType.REQUEST_CONTROLLER_COUNT:
             if data != self.device_num or data != len(self.devices):
                 self.device_num = data
-                self.devices = [None for x in range(
-                    self.device_num)]  # type: ignore
+                self.devices = [None for x in range(  # type: ignore
+                    self.device_num)]  
                 for x in range(self.device_num):
                     self.comms.requestDeviceData(x)
         elif type == utils.PacketType.REQUEST_CONTROLLER_DATA:
