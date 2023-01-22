@@ -410,7 +410,9 @@ class OpenRGBClient(utils.RGBObject):
         elif type == utils.PacketType.REQUEST_PROFILE_LIST:
             self.profiles = data
         elif type == utils.PacketType.REQUEST_PLUGIN_LIST:
-            self.plugins = [create_plugin(plugin, self.comms) for plugin in data]
+            for plugin in data:
+                if (all(plugin.id != existing.id for existing in self.plugins)):
+                    self.plugins.append(create_plugin(plugin, self.comms))
         elif type == utils.PacketType.PLUGIN_SPECIFIC:
             next(plugin for plugin in self.plugins if plugin.id == device)._recv(data)
 
@@ -583,8 +585,7 @@ class OpenRGBClient(utils.RGBObject):
         '''
         self.comms.requestPluginList()
         for plugin in self.plugins:
-            if hasattr(plugin, 'update'):
-                plugin.update()
+            plugin.update()
 
     def show(self, fast: bool = False, force: bool = False):
         '''

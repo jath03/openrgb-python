@@ -38,6 +38,10 @@ class ORGBPlugin:
         # To be implemented per plugin
         pass
 
+    def update(self):
+        # Optional, called with `OpenRGBClient.update_plugins`
+        pass
+
 
 class EffectPacketType(IntEnum):
     REQUEST_EFFECT_LIST = 0
