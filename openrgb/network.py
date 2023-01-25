@@ -187,8 +187,6 @@ class NetworkClient:
                     while len(data) < packet_size:
                         data += self.sock.recv(packet_size - len(data))
                     idata = iter(data)
-                    for _ in range(4):
-                        next(idata)
                 except utils.CONNECTION_ERRORS as e:
                     self.stop_connection()
                     raise utils.OpenRGBDisconnected() from e
