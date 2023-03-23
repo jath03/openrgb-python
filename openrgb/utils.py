@@ -57,7 +57,9 @@ class DeviceType(IntEnum):
     STORAGE = 14
     CASE = 15
     MICROPHONE = 16
-    UNKNOWN = 17
+    ACCESSORY = 17
+    KEYPAD = 18
+    UNKNOWN = 19
 
 
 class ZoneType(IntEnum):
