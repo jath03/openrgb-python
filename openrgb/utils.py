@@ -329,7 +329,11 @@ class ModeData:
         else:
             brightness = None
         direction = parse_var('I', data)
-        color_mode = ModeColors(parse_var('I', data))
+        try:
+            color_mode = ModeColors(parse_var('I', data))
+        except ValueError:
+            color_mode = ModeColors.PER_LED
+
         num_colors = parse_var('H', data)
 
         colors = []
