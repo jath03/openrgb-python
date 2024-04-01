@@ -300,11 +300,11 @@ class Device(utils.RGBContainer):
 
         :param mode: the id, name, or the ModeData object itself to set as the mode
         '''
-        if type(mode) == utils.ModeData:
+        if isinstance(mode, utils.ModeData):
             pass
-        elif type(mode) == int:
+        elif isinstance(mode, int):
             mode = self.modes[mode]
-        elif type(mode) == str:
+        elif isinstance(mode, str):
             try:
                 mode = next(
                     (m for m in self.modes if m.name.lower() == mode.lower()))
@@ -454,7 +454,7 @@ class OpenRGBClient(utils.RGBObject):
         :param directory: what directory the profile is in.  Defaults to OpenRGB's config directory for supported OS's (Windows or Linux), or falls back to using the current working directory.
         '''
         if local:
-            assert type(name) is str
+            assert isinstance(name, str)
             if directory == '':
                 if platform.system() == "Linux":
                     directory = environ['HOME'].rstrip(
@@ -482,16 +482,16 @@ class OpenRGBClient(utils.RGBObject):
                     if new_controller.active_mode != device.active_mode:
                         device.set_mode(new_controller.active_mode)
         else:
-            if type(name) is str:
+            if isinstance(name, str):
                 try:
                     name = next(
                         p for p in self.profiles if p.name.lower() == name.lower())
                 except StopIteration as e:
                     raise ValueError(
                         f"`{name}` is not an existing profile") from e
-            elif type(name) is int:
+            elif isinstance(name, int):
                 name = self.profiles[name]
-            elif type(name) is utils.Profile:
+            elif isinstance(name, utils.Profile):
                 pass
             raw_name = name.pack()  # type: ignore
             self.comms.send_header(
@@ -521,15 +521,15 @@ class OpenRGBClient(utils.RGBObject):
                 f.write(utils.LocalProfile(
                     [dev.data for dev in self.devices]).pack())
         else:
-            if type(name) is str:
+            if isinstance(name, str):
                 try:
                     name = next(
                         p for p in self.profiles if p.name.lower() == name.lower())
                 except StopIteration:
                     name = utils.Profile(name)  # type: ignore
-            elif type(name) is int:
+            elif isinstance(name, int):
                 name = self.profiles[name]
-            elif type(name) is utils.Profile:
+            elif isinstance(name, utils.Profile):
                 pass
             raw_name = name.pack()  # type: ignore
             self.comms.send_header(
@@ -543,15 +543,15 @@ class OpenRGBClient(utils.RGBObject):
 
         :param name: Can be a profile's name, index, or even the Profile itself
         '''
-        if type(name) is str:
+        if isinstance(name, str):
             try:
                 name = next(
                     p for p in self.profiles if p.name.lower() == name.lower())
             except StopIteration as e:
                 raise ValueError(f"`{name}` is not an existing profile") from e
-        elif type(name) is int:
+        elif isinstance(name, int):
             name = self.profiles[name]
-        elif type(name) is utils.Profile:
+        elif isinstance(name, utils.Profile):
             pass
         raw_name = name.pack()  # type: ignore
         self.comms.send_header(
