@@ -294,23 +294,25 @@ class Device(utils.RGBContainer):
         elif active_mode.color_mode == utils.ModeColors.PER_LED:
             self._set_device_colors(colors, fast)
 
-    def set_mode(self, mode: Union[int, str, utils.ModeData], save: bool = False):
+    def set_mode(self, mode: Union[str, int, utils.ModeData], save: bool = False):
         '''
         Sets the device's mode
 
-        :param mode: the id, name, or the ModeData object itself to set as the mode
+        :param mode: the name, id, or the ModeData object itself to set as the mode
         '''
-        if type(mode) == utils.ModeData:
-            pass
-        elif type(mode) == int:
-            mode = self.modes[mode]
-        elif type(mode) == str:
+        if isinstance(mode, str):
             try:
                 mode = next(
                     (m for m in self.modes if m.name.lower() == mode.lower()))
             except StopIteration as e:
                 raise ValueError(
                     f"Mode `{mode}` not found for device `{self.name}`") from e
+        elif isinstance(mode, int):
+            mode = self.modes[mode]
+        elif isinstance(mode, utils.ModeData):
+            pass
+        else:
+            raise TypeError()
         data = mode.pack(self.comms._protocol_version)  # type: ignore
         self.comms.send_header(
             self.id,
@@ -454,7 +456,7 @@ class OpenRGBClient(utils.RGBObject):
         :param directory: what directory the profile is in.  Defaults to OpenRGB's config directory for supported OS's (Windows or Linux), or falls back to using the current working directory.
         '''
         if local:
-            assert type(name) is str
+            assert isinstance(name, str)
             if directory == '':
                 if platform.system() == "Linux":
                     directory = environ['HOME'].rstrip(
@@ -482,17 +484,19 @@ class OpenRGBClient(utils.RGBObject):
                     if new_controller.active_mode != device.active_mode:
                         device.set_mode(new_controller.active_mode)
         else:
-            if type(name) is str:
+            if isinstance(name, str):
                 try:
                     name = next(
                         p for p in self.profiles if p.name.lower() == name.lower())
                 except StopIteration as e:
                     raise ValueError(
                         f"`{name}` is not an existing profile") from e
-            elif type(name) is int:
+            elif isinstance(name, int):
                 name = self.profiles[name]
-            elif type(name) is utils.Profile:
+            elif isinstance(name, utils.Profile):
                 pass
+            else:
+                raise TypeError()
             raw_name = name.pack()  # type: ignore
             self.comms.send_header(
                 0, utils.PacketType.REQUEST_LOAD_PROFILE, len(raw_name))
@@ -521,16 +525,18 @@ class OpenRGBClient(utils.RGBObject):
                 f.write(utils.LocalProfile(
                     [dev.data for dev in self.devices]).pack())
         else:
-            if type(name) is str:
+            if isinstance(name, str):
                 try:
                     name = next(
                         p for p in self.profiles if p.name.lower() == name.lower())
                 except StopIteration:
                     name = utils.Profile(name)  # type: ignore
-            elif type(name) is int:
+            elif isinstance(name, int):
                 name = self.profiles[name]
-            elif type(name) is utils.Profile:
+            elif isinstance(name, utils.Profile):
                 pass
+            else:
+                raise TypeError()
             raw_name = name.pack()  # type: ignore
             self.comms.send_header(
                 0, utils.PacketType.REQUEST_SAVE_PROFILE, len(raw_name))
@@ -543,16 +549,18 @@ class OpenRGBClient(utils.RGBObject):
 
         :param name: Can be a profile's name, index, or even the Profile itself
         '''
-        if type(name) is str:
+        if isinstance(name, str):
             try:
                 name = next(
                     p for p in self.profiles if p.name.lower() == name.lower())
             except StopIteration as e:
                 raise ValueError(f"`{name}` is not an existing profile") from e
-        elif type(name) is int:
+        elif isinstance(name, int):
             name = self.profiles[name]
-        elif type(name) is utils.Profile:
+        elif isinstance(name, utils.Profile):
             pass
+        else:
+            raise TypeError()
         raw_name = name.pack()  # type: ignore
         self.comms.send_header(
             0, utils.PacketType.REQUEST_DELETE_PROFILE, len(raw_name))
