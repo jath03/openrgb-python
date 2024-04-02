@@ -8,7 +8,7 @@ advanced use cases if someone writes the code.  Any plugins that support SDK
 interactions will be listed under the :any:`plugins<OpenRGBClient.plugins>`
 
 
-`OpenRGBEffectsPlugin<https://gitlab.com/OpenRGBDevelopers/OpenRGBEffectsPlugin>`_
+`OpenRGBEffectsPlugin <https://gitlab.com/OpenRGBDevelopers/OpenRGBEffectsPlugin>`_
 -----------------------------------------------------------------------------------
 
 
