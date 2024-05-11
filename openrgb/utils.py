@@ -33,6 +33,9 @@ class ModeDirections(IntEnum):
 
 
 class ModeColors(IntEnum):
+    """
+    Partial list of color_mode values.  This is not a comprehensive set so do not use this to unpack.
+    """
     NONE = 0
     PER_LED = 1
     MODE_SPECIFIC = 2
@@ -245,7 +248,7 @@ class ModeData:
     speed: Optional[int]
     brightness: Optional[int]
     direction: Optional[ModeDirections]
-    color_mode: ModeColors
+    color_mode: int
     colors: Optional[list[RGBColor]]
 
     def validate(self, version: int):
@@ -329,7 +332,7 @@ class ModeData:
         else:
             brightness = None
         direction = parse_var('I', data)
-        color_mode = ModeColors(parse_var('I', data))
+        color_mode = parse_var('I', data)
         num_colors = parse_var('H', data)
 
         colors = []
