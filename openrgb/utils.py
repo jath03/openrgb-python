@@ -341,7 +341,10 @@ class ModeData:
         if (ModeFlags.HAS_DIRECTION_HV in flags
                 or ModeFlags.HAS_DIRECTION_UD in flags
                 or ModeFlags.HAS_DIRECTION_LR in flags):
-            direction = ModeDirections(direction)
+            try:
+                direction = ModeDirections(direction)
+            except ValueError:
+                direction = None
         else:
             direction = None
         if ModeFlags.HAS_SPEED not in flags:
