@@ -214,7 +214,7 @@ class Device(utils.RGBContainer):
             struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
         )
         buff = struct.pack("H", len(self.leds)) + (color.pack())*len(self.leds)
-        buff = struct.pack("I", len(buff)) + buff
+        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
@@ -235,7 +235,7 @@ class Device(utils.RGBContainer):
         )
         buff = struct.pack("H", len(self.leds)) + \
             b''.join((color.pack() for color in colors))
-        buff = struct.pack("I", len(buff)) + buff
+        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
