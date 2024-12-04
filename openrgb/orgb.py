@@ -122,7 +122,7 @@ class Zone(utils.RGBContainer):
         )
         buff = struct.pack("iH", self.id, len(self.leds)) + \
             (color.pack())*len(self.leds)
-        buff = struct.pack("I", len(buff)) + buff
+        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
@@ -144,7 +144,7 @@ class Zone(utils.RGBContainer):
         )
         buff = struct.pack("iH", self.id, len(self.leds)) + \
             b''.join((color.pack() for color in colors))
-        buff = struct.pack("I", len(buff)) + buff
+        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
         self.comms.send_data(buff)
         if not fast:
             self.update()
