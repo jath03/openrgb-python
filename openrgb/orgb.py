@@ -164,20 +164,22 @@ class Zone(utils.RGBContainer):
         self.update()
 
 
-class Device(utils.RGBContainer):
-    '''
-    A class to represent an RGB Device
-    '''
 
-    def __init__(self, data: utils.ControllerData, device_id: int, network_client: NetworkClient):
+class Device(utils.RGBContainer):
+    """
+    A class to represent an RGB Device
+    """
+
+    def __init__(self, data:utils.ControllerData, device_id: int, network_client: NetworkClient):
         self.leds: list[LED] = [None for i in data.leds]  # type: ignore
         self.zones: list[Zone] = [None for i in data.zones]  # type: ignore
         self.id = device_id
         self.device_id = device_id
         self.comms = network_client
+        self.enabled = True
         self._update(data)
 
-    def _update(self, data: utils.ControllerData):
+    def _update(self, data:utils.ControllerData):
         self.name = data.name
         self.metadata = data.metadata
         self.type = data.device_type
@@ -185,14 +187,12 @@ class Device(utils.RGBContainer):
             self.leds = [None for i in data.leds]  # type: ignore
         for x in range(len(data.leds)):
             if self.leds[x] is None:
-                self.leds[x] = LED(data.leds[x], data.colors[x],
-                                   x, self.device_id, self.comms)
+                self.leds[x] = LED(data.leds[x], data.colors[x], x, self.device_id, self.comms)
             else:
                 self.leds[x]._update(data.leds[x], data.colors[x])
         for x in range(len(data.zones)):
             if self.zones[x] is None:
-                self.zones[x] = Zone(
-                    data.zones[x], x, self.device_id, self.comms)
+                self.zones[x] = Zone(data.zones[x], x, self.device_id, self.comms)
             else:
                 self.zones[x]._update(data.zones[x])  # type: ignore
         self.modes = data.modes
@@ -201,165 +201,155 @@ class Device(utils.RGBContainer):
         self.active_mode = data.active_mode
         self.data = data
 
-    def _set_device_color(self, color: utils.RGBColor, fast: bool = False):
-        '''
+    def _set_device_color(self, color:utils.RGBColor, fast: bool = False):
+        """
         Sets the device's color
 
         :param color: the color to set the LED(s) to
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
-        '''
-        self.comms.send_header(
-            self.id,
-            utils.PacketType.RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
-        )
-        buff = struct.pack("H", len(self.leds)) + (color.pack())*len(self.leds)
-        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
-        self.comms.send_data(buff)
-        if not fast:
-            self.update()
+        """
+        if self.enabled:
+            self.comms.send_header(
+                self.id,
+               utils.PacketType.RGBCONTROLLER_UPDATELEDS,
+                struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x"),
+            )
+            buff = struct.pack("H", len(self.leds)) + (color.pack()) * len(self.leds)
+            buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
+            self.comms.send_data(buff)
+            if not fast:
+                self.update()
 
     def _set_device_colors(self, colors: list[utils.RGBColor], fast: bool = False):
-        '''
+        """
         Sets the devices LEDs' colors
 
         :param colors: the list of colors, one per LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True`
-        '''
-        if len(colors) != len(self.leds):
-            raise IndexError("Number of colors doesn't match number of LEDs")
-        self.comms.send_header(
-            self.id,
-            utils.PacketType.RGBCONTROLLER_UPDATELEDS,
-            struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x")
-        )
-        buff = struct.pack("H", len(self.leds)) + \
-            b''.join((color.pack() for color in colors))
-        buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
-        self.comms.send_data(buff)
-        if not fast:
-            self.update()
+        """
+        if self.enabled:
+            if len(colors) != len(self.leds):
+                raise IndexError("Number of colors doesn't match number of LEDs")
+            self.comms.send_header(
+                self.id,
+               utils.PacketType.RGBCONTROLLER_UPDATELEDS,
+                struct.calcsize(f"IH{3*(len(self.leds))}b{len(self.leds)}x"),
+            )
+            buff = struct.pack("H", len(self.leds)) + b"".join((color.pack() for color in colors))
+            buff = struct.pack("I", len(buff) + struct.calcsize("I")) + buff
+            self.comms.send_data(buff)
+            if not fast:
+                self.update()
 
-    def _set_mode_color(self, color: utils.RGBColor):
-        '''
+    def _set_mode_color(self, color:utils.RGBColor):
+        """
         Sets the mode-specific color, if possible
 
         :param color: the color to set the LED(s) to
-        '''
-        active_mode = self.modes[self.active_mode]
-        assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
-        assert active_mode.colors is not None
-        active_mode.colors = [color]*active_mode.colors_max  # type: ignore
-        self.set_mode(active_mode)
+        """
+        if self.enabled:
+            active_mode = self.modes[self.active_mode]
+            assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
+            assert active_mode.colors is not None
+            active_mode.colors = [color] * active_mode.colors_max  # type: ignore
+            self.set_mode(active_mode)
 
     def _set_mode_colors(self, colors: list[utils.RGBColor]):
-        '''
+        """
         Sets the mode-specific color, if possible
 
         :param color: the color to set the LED(s) to
-        '''
-        active_mode = self.modes[self.active_mode]
-        assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
-        assert active_mode.colors is not None
-        assert active_mode.colors_min <= len(  # type: ignore
-            colors) <= active_mode.colors_max
-        active_mode.colors = colors
-        self.set_mode(active_mode)
+        """
+        if self.enabled:
+            active_mode = self.modes[self.active_mode]
+            assert active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC
+            assert active_mode.colors is not None
+            assert active_mode.colors_min <= len(colors) <= active_mode.colors_max  # type: ignore
+            active_mode.colors = colors
+            self.set_mode(active_mode)
 
-    def set_color(self, color: utils.RGBColor, fast: bool = False):
-        '''
+    def set_color(self, color:utils.RGBColor, fast: bool = False):
+        """
         Sets the color of the device whether the current mode is per-led or
         mode-specific
 
         :param colors: the list of colors, one per LED
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True` (only applies when not setting a mode-specific color)
-        '''
-        active_mode = self.modes[self.active_mode]
-        if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
-            self._set_mode_color(color)
-        elif active_mode.color_mode == utils.ModeColors.PER_LED:
-            self._set_device_color(color, fast)
+        """
+        if self.enabled:
+            active_mode = self.modes[self.active_mode]
+            if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
+                self._set_mode_color(color)
+            elif active_mode.color_mode == utils.ModeColors.PER_LED:
+                self._set_device_color(color, fast)
 
     def set_colors(self, colors: list[utils.RGBColor], fast: bool = False):
-        '''
+        """
         Sets the colors of the device whether the current mode is per-led or
         mode-specific
 
         :param colors: the list of colors, one per LED or per mode-specific color
         :param fast: If you care more about quickly setting colors than having correct internal state data, then set :code:`fast` to :code:`True` (only applies when not setting a mode-specific color)
-        '''
-        active_mode = self.modes[self.active_mode]
-        if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
-            self._set_mode_colors(colors)
-        elif active_mode.color_mode == utils.ModeColors.PER_LED:
-            self._set_device_colors(colors, fast)
+        """
+        if self.enabled:
+            active_mode = self.modes[self.active_mode]
+            if active_mode.color_mode == utils.ModeColors.MODE_SPECIFIC:
+                self._set_mode_colors(colors)
+            elif active_mode.color_mode == utils.ModeColors.PER_LED:
+                self._set_device_colors(colors, fast)
 
-    def set_mode(self, mode: Union[str, int, utils.ModeData], save: bool = False):
-        '''
+    def set_mode(self, mode: Union[str, int,utils.ModeData], save: bool = False):
+        """
         Sets the device's mode
 
-        :param mode: the name, id, or the ModeData object itself to set as the mode
-        '''
-        if isinstance(mode, str):
-            try:
-                mode = next(
-                    (m for m in self.modes if m.name.lower() == mode.lower()))
-            except StopIteration as e:
-                raise ValueError(
-                    f"Mode `{mode}` not found for device `{self.name}`") from e
-        elif isinstance(mode, int):
-            mode = self.modes[mode]
-        elif isinstance(mode, utils.ModeData):
-            pass
-        else:
-            raise TypeError()
-        data = mode.pack(self.comms._protocol_version)  # type: ignore
-        self.comms.send_header(
-            self.id,
-            utils.PacketType.RGBCONTROLLER_UPDATEMODE,
-            len(data)
-        )
-        self.comms.send_data(data)
-        if save:
-            self.comms.send_header(
-                self.id,
-                utils.PacketType.RGBCONTROLLER_SAVEMODE,
-                len(data)
-            )
+        :param mode: the name, id, or theutils.ModeData object itself to set as the mode
+        """
+        if self.enabled:
+            if isinstance(mode, str):
+                try:
+                    mode = next((m for m in self.modes if m.name.lower() == mode.lower()))
+                except StopIteration as e:
+                    raise ValueError(f"Mode `{mode}` not found for device `{self.name}`") from e
+            elif isinstance(mode, int):
+                mode = self.modes[mode]
+            elif isinstance(mode,utils.ModeData):
+                pass
+            else:
+                raise TypeError()
+            data = mode.pack(self.comms._protocol_version)  # type: ignore
+            self.comms.send_header(self.id,utils.PacketType.RGBCONTROLLER_UPDATEMODE, len(data))
             self.comms.send_data(data)
-        self.update()
+            if save:
+                self.comms.send_header(self.id,utils.PacketType.RGBCONTROLLER_SAVEMODE, len(data))
+                self.comms.send_data(data)
+            self.update()
 
     def set_custom_mode(self):
-        '''
+        """
         Sets the mode to whatever the device supports that provides the most
         granular control
-        '''
-        self.comms.send_header(
-            self.id,
-            utils.PacketType.RGBCONTROLLER_SETCUSTOMMODE,
-            0
-        )
-        self.update()
-        self.set_mode(self.active_mode)
+        """
+        if self.enabled:
+            self.comms.send_header(self.id,utils.PacketType.RGBCONTROLLER_SETCUSTOMMODE, 0)
+            self.update()
+            self.set_mode(self.active_mode)
 
     def save_mode(self):
-        '''
+        """
         Saves the currently selected mode
-        '''
-        data = self.modes[self.active_mode].pack(self.comms._protocol_version)
-        self.comms.send_header(
-            self.id,
-            utils.PacketType.RGBCONTROLLER_SAVEMODE,
-            len(data)
-        )
-        self.comms.send_data(data)
+        """
+        if self.enabled:
+            data = self.modes[self.active_mode].pack(self.comms._protocol_version)
+            self.comms.send_header(self.id, utils.PacketType.RGBCONTROLLER_SAVEMODE, len(data))
+            self.comms.send_data(data)
 
     def off(self):
-        '''
+        """
         Turns off device by setting the custom mode and then calling :any:`RGBObject.clear`
-        '''
-        self.set_custom_mode()
-        self.clear()
+        """
+        if self.enabled:
+            self.set_custom_mode()
+            self.clear()
 
 
 class OpenRGBClient(utils.RGBObject):
