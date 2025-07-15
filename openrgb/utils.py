@@ -187,7 +187,7 @@ class RGBColor:
         return cls(r, g, b)
 
     @classmethod
-    def fromHSV(cls, hue: int, saturation: int, value: int) -> RGBColor:
+    def fromHSV(cls, hue: float, saturation: float, value: float) -> RGBColor:
         '''
         Creates a RGBColor object from HSV values using colorsys
         '''
