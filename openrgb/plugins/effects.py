@@ -31,7 +31,7 @@ class Effect:
 
 
 class EffectsPlugin(ORGBPlugin):
-    version = 1
+    version = 2
     pkt_type_enum = EffectPacketType
 
     def __init__(self, *args, **kwargs):
@@ -43,6 +43,8 @@ class EffectsPlugin(ORGBPlugin):
         self.comms.read()
 
     def recv(self, pkt_id: EffectPacketType, data: Iterator[int]):  # type: ignore
+        for _ in range(4):
+            next(data)
         if pkt_id == EffectPacketType.REQUEST_EFFECT_LIST:
             self.effects = utils.parse_list(Effect, data, self.version)
 
