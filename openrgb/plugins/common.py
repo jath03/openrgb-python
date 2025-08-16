@@ -17,7 +17,7 @@ class ORGBPlugin:
         self.id = plugin_data.id
         self.sdk_version = plugin_data.sdk_version
         self.comms = comms
-        assert self.sdk_version == self.version
+        assert self.sdk_version <= self.version
 
     def __repr__(self):
         return type(self).__name__

@@ -43,8 +43,9 @@ class EffectsPlugin(ORGBPlugin):
         self.comms.read()
 
     def recv(self, pkt_id: EffectPacketType, data: Iterator[int]):  # type: ignore
-        for _ in range(4):
-            next(data)
+        if self.sdk_version > 1:
+            for _ in range(4):
+                next(data)
         if pkt_id == EffectPacketType.REQUEST_EFFECT_LIST:
             self.effects = utils.parse_list(Effect, data, self.version)
 
