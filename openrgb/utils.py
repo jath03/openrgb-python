@@ -201,6 +201,20 @@ class RGBColor:
         return cls(*(int(hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)))
 
 
+    def toHex(self) -> str:
+        """Get hex representation of color"""
+        return f"#{self.red:02x}{self.green:02x}{self.blue:02x}".upper()
+
+    def toHsv(self) -> tuple[float, float, float]:
+        return colorsys.rgb_to_hsv(self.red / 255, self.green / 255, self.blue / 255)
+
+    def __mul__(self, factor):
+        return RGBColor(
+            red=round(self.red * factor),
+            green=round(self.green * factor),
+            blue=round(self.blue * factor),
+        )
+
 @dataclass
 class LEDData:
     name: str
