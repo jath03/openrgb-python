@@ -259,7 +259,7 @@ class ModeData:
             if ModeFlags.HAS_MODE_SPECIFIC_COLOR in self.flags:
                 assert self.colors_min <= len(self.colors) <= self.colors_max  # type: ignore
             if ModeFlags.HAS_BRIGHTNESS in self.flags and version >= 3:
-                assert self.brightness_min <= self.brightness <= self.brightness_max  # type: ignore
+                assert self.brightness_min <= self.brightness <= self.brightness_max or self.brightness_max <= self.brightness <= self.brightness_min  # type: ignore
         except AssertionError as e:
             raise ValueError("Mode validation failed.  Required values invalid or not present") from e
 

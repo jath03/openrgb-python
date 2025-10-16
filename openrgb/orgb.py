@@ -1,11 +1,11 @@
 from __future__ import annotations
 import struct
 import platform
+import warnings
 from openrgb import utils
 from typing import Union, Any, Optional
 from openrgb.network import NetworkClient
 from openrgb.plugins import create_plugin, ORGBPlugin
-from time import sleep
 from os import environ
 
 
@@ -294,7 +294,7 @@ class Device(utils.RGBContainer):
         elif active_mode.color_mode == utils.ModeColors.PER_LED:
             self._set_device_colors(colors, fast)
 
-    def set_mode(self, mode: Union[str, int, utils.ModeData], save: bool = False):
+    def set_mode(self, mode: Union[str, int, utils.ModeData], save: bool = False, force: bool = False):
         '''
         Sets the device's mode
 
@@ -313,7 +313,13 @@ class Device(utils.RGBContainer):
             pass
         else:
             raise TypeError()
-        data = mode.pack(self.comms._protocol_version)  # type: ignore
+        try:
+            data = mode.pack(self.comms._protocol_version)  # type: ignore
+        except ValueError as e:
+            if force:
+                warnings.warn(str(e))
+            else:
+                raise e
         self.comms.send_header(
             self.id,
             utils.PacketType.RGBCONTROLLER_UPDATEMODE,
