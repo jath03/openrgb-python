@@ -621,6 +621,10 @@ class OpenRGBClient(utils.RGBObject):
         '''Disconnects from the OpenRGB SDK'''
         self.comms.stop_connection()
 
+    def rescan(self):
+        '''Rescans for devices'''
+        self.comms.requestRescanDevices()
+
     @property
     def protocol_version(self):
         '''The protocol version of the connected SDK server'''
