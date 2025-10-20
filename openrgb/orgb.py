@@ -622,7 +622,11 @@ class OpenRGBClient(utils.RGBObject):
         self.comms.stop_connection()
 
     def rescan(self):
-        '''Rescans for devices'''
+        '''
+        Rescans for devices
+
+        State-breaking, you must call :any:`OpenRGBClient.update` after rescan is complete in OpenRGB. 
+        '''
         self.comms.requestRescanDevices()
 
     @property
