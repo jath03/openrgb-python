@@ -200,6 +200,7 @@ class Device(utils.RGBContainer):
         self._colors = self.colors[:]
         self.active_mode = data.active_mode
         self.data = data
+        self.state_hash = hash(str(data))
 
     def _set_device_color(self, color: utils.RGBColor, fast: bool = False):
         '''
