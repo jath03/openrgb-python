@@ -411,6 +411,7 @@ class OpenRGBClient(utils.RGBObject):
                     self.devices[device] = Device(data, device, self.comms)
                 else:
                     self.devices[device]._update(data)  # type: ignore
+                self.state_hash = hash("".join(str(dev.state_hash) for dev in self.devices if dev))
             except IndexError:
                 self.comms.requestDeviceNum()
         elif type == utils.PacketType.DEVICE_LIST_UPDATED:
