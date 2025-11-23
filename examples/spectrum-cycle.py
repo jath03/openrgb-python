@@ -9,7 +9,7 @@ print(client)
 
 print(client.devices)
 
-client.off()
+client.clear()
 
 while True:
     for x in range(360):
