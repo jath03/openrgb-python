@@ -71,13 +71,6 @@ class ZoneType(IntEnum):
     MATRIX_LOOP_Y = 5
     SEGMENTED = 6
 
-    @classmethod
-    def _missing_(cls, value):
-        member = int.__new__(cls, value)
-        member._name_ = f"UNKNOWN_{value}"
-        member._value_ = value
-        return member
-
 
 class PacketType(IntEnum):
     REQUEST_CONTROLLER_COUNT = 0
@@ -449,12 +442,12 @@ class ZoneData:
                 self.num_leds
             )
         )
-        if self.mat_height and self.mat_width:  # type: ignore
-            flat = [i if i is not None else 0xFFFFFFFF for li in self.matrix_map for i in li]  # type: ignore
+        if self.mat_height > 0 and self.mat_width > 0:  # type: ignore
+            flat = [i for li in self.matrix_map for i in li]  # type: ignore
             assert len(flat) == (self.mat_width * self.mat_height)  # type: ignore
             data += struct.pack(
-                f"=HII{len(flat)}I",
-                8 + len(flat) * 4,
+                f"HII{len(flat)}I",
+                len(flat),
                 self.mat_height,
                 self.mat_width,
                 *flat
