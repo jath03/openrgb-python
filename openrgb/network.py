@@ -227,6 +227,12 @@ class NetworkClient:
         self.send_header(0, utils.PacketType.REQUEST_PLUGIN_LIST, 0)
         self.read()
 
+    def requestRescanDevices(self):
+        '''
+        Sends the request to rescan devices
+        '''
+        self.send_header(0, utils.PacketType.REQUEST_RESCAN_DEVICES, 0)
+
     def send_header(self, device_id: int, packet_type: utils.PacketType, packet_size: int, release_lock: bool = True):
         '''
         Sends a header to the SDK
