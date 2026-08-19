@@ -66,6 +66,10 @@ class ZoneType(IntEnum):
     SINGLE = 0
     LINEAR = 1
     MATRIX = 2
+    LINEAR_LOOP = 3
+    MATRIX_LOOP_X = 4
+    MATRIX_LOOP_Y = 5
+    SEGMENTED = 6
 
 
 class PacketType(IntEnum):
@@ -468,7 +472,7 @@ class ZoneData:
         leds_max = parse_var('I', data)
         num_leds = parse_var('I', data)
         matrix_zone_size = parse_var('H', data)
-        if zone_type == ZoneType.MATRIX:
+        if matrix_zone_size > 0:
             height = parse_var('I', data)
             width = parse_var('I', data)
             matrix: list[list[Optional[int]]] = [[] for x in range(height)]
