@@ -597,9 +597,14 @@ class OpenRGBClient(utils.RGBObject):
         '''
         Gets the list of enabled plugins from the server.
         '''
-        self.comms.requestPluginList()
-        for plugin in self.plugins:
-            plugin.update()
+        # OpenRGB 1.0+ doesn't respond to the plugin request when run in --server mode
+        # so we need to do a bit of sketchy error handling for now
+        try:
+            self.comms.requestPluginList()
+            for plugin in self.plugins:
+                plugin.update()
+        except utils.OpenRGBDisconnected:
+            self.connect()
 
     def show(self, fast: bool = False, force: bool = False):
         '''
