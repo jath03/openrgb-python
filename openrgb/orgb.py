@@ -334,6 +334,8 @@ class Device(utils.RGBContainer):
             )
             self.comms.send_data(data)
         self.update()
+        # OpenRGB 1.0+ can answer update() before it has applied the new mode
+        self.active_mode = mode.id
 
     def set_custom_mode(self):
         '''
