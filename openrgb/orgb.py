@@ -340,6 +340,9 @@ class Device(utils.RGBContainer):
                 break
             time.sleep(0.05)
         else:
+            warnings.warn(
+                f"Device {self.name} did not confirm mode change to "
+                f"{mode.name!r}, setting it anyways")
             self.active_mode = mode.id
 
     def set_custom_mode(self):
