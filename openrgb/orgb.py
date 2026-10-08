@@ -1,5 +1,4 @@
 from __future__ import annotations
-import socket
 import struct
 import platform
 import warnings
@@ -605,8 +604,8 @@ class OpenRGBClient(utils.RGBObject):
             self.comms.requestPluginList()
             for plugin in self.plugins:
                 plugin.update()
-        except utils.OpenRGBDisconnected as e:
-            self.plugin_list_unanswered = isinstance(e.__cause__, socket.timeout)
+        except utils.OpenRGBDisconnected:
+            self.plugin_list_unanswered = True
             self.connect()
 
     def show(self, fast: bool = False, force: bool = False):
