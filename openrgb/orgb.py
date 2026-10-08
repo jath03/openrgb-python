@@ -1,6 +1,7 @@
 from __future__ import annotations
 import struct
 import platform
+import time
 import warnings
 from openrgb import utils
 from typing import Union, Any, Optional
@@ -333,9 +334,17 @@ class Device(utils.RGBContainer):
                 len(data)
             )
             self.comms.send_data(data)
-        self.update()
-        # OpenRGB 1.0+ can answer update() before it has applied the new mode
-        self.active_mode = mode.id
+        # OpenRGB 1.0+ can answer update() before it has applied the new mode,
+        # so poll until the server reports the requested mode
+        for _ in range(5):
+            self.update()
+            if self.active_mode == mode.id:
+                break
+            time.sleep(0.05)
+        else:
+            # Server rejected the request or was too slow to apply it; trust
+            # the request anyway so color setters still dispatch on it
+            self.active_mode = mode.id
 
     def set_custom_mode(self):
         '''
