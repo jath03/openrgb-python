@@ -1,4 +1,5 @@
 from __future__ import annotations
+import socket
 import struct
 import platform
 import warnings
@@ -386,6 +387,7 @@ class OpenRGBClient(utils.RGBObject):
         self.devices: list[Device] = []
         self.profiles: list[utils.Profile] = []
         self.plugins: list[ORGBPlugin] = []
+        self.plugin_list_unanswered = False
         self.comms = NetworkClient(
             self._callback, address, port, name, protocol_version)
         self.address = address
@@ -599,11 +601,14 @@ class OpenRGBClient(utils.RGBObject):
         '''
         # OpenRGB 1.0+ doesn't respond to the plugin request when run in --server mode
         # so we need to do a bit of sketchy error handling for now
+        if self.plugin_list_unanswered:
+            return
         try:
             self.comms.requestPluginList()
             for plugin in self.plugins:
                 plugin.update()
-        except utils.OpenRGBDisconnected:
+        except utils.OpenRGBDisconnected as e:
+            self.plugin_list_unanswered = isinstance(e.__cause__, socket.timeout)
             self.connect()
 
     def show(self, fast: bool = False, force: bool = False):
