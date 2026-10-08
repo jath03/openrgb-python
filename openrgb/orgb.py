@@ -420,7 +420,10 @@ class OpenRGBClient(utils.RGBObject):
         elif type == utils.PacketType.REQUEST_PLUGIN_LIST:
             for plugin in data:
                 if (all(plugin.id != existing.id for existing in self.plugins)):
-                    self.plugins.append(create_plugin(plugin, self.comms))
+                    # Plugins that are not supported should be skipped
+                    new_plugin = create_plugin(plugin, self.comms)
+                    if new_plugin is not None:
+                        self.plugins.append(new_plugin)
         elif type == utils.PacketType.PLUGIN_SPECIFIC:
             next(plugin for plugin in self.plugins if plugin.id == device)._recv(data)
 
