@@ -1,6 +1,7 @@
 from __future__ import annotations
 import struct
 import platform
+import time
 import warnings
 from openrgb import utils
 from typing import Union, Any, Optional
@@ -333,7 +334,16 @@ class Device(utils.RGBContainer):
                 len(data)
             )
             self.comms.send_data(data)
-        self.update()
+        for _ in range(5):
+            self.update()
+            if self.active_mode == mode.id:
+                break
+            time.sleep(0.05)
+        else:
+            warnings.warn(
+                f"Device {self.name} did not confirm mode change to "
+                f"{mode.name!r}, setting it anyways")
+            self.active_mode = mode.id
 
     def set_custom_mode(self):
         '''
