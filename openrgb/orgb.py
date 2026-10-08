@@ -586,7 +586,7 @@ class OpenRGBClient(utils.RGBObject):
             self.comms.requestDeviceData(x)
         if self.comms._protocol_version >= 2:
             self.update_profiles()
-        if self.comms._protocol_version >= 4:
+        if self.comms._protocol_version >= 4 and not self.plugin_list_unanswered:
             self.update_plugins()
 
     def update_profiles(self):
@@ -601,8 +601,6 @@ class OpenRGBClient(utils.RGBObject):
         '''
         # OpenRGB 1.0+ doesn't respond to the plugin request when run in --server mode
         # so we need to do a bit of sketchy error handling for now
-        if self.plugin_list_unanswered:
-            return
         try:
             self.comms.requestPluginList()
             for plugin in self.plugins:
