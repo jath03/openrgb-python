@@ -386,6 +386,7 @@ class OpenRGBClient(utils.RGBObject):
         self.devices: list[Device] = []
         self.profiles: list[utils.Profile] = []
         self.plugins: list[ORGBPlugin] = []
+        self.plugin_list_unanswered = False
         self.comms = NetworkClient(
             self._callback, address, port, name, protocol_version)
         self.address = address
@@ -587,7 +588,7 @@ class OpenRGBClient(utils.RGBObject):
             self.comms.requestDeviceData(x)
         if self.comms._protocol_version >= 2:
             self.update_profiles()
-        if self.comms._protocol_version >= 4:
+        if self.comms._protocol_version >= 4 and not self.plugin_list_unanswered:
             self.update_plugins()
 
     def update_profiles(self):
@@ -607,6 +608,7 @@ class OpenRGBClient(utils.RGBObject):
             for plugin in self.plugins:
                 plugin.update()
         except utils.OpenRGBDisconnected:
+            self.plugin_list_unanswered = True
             self.connect()
 
     def show(self, fast: bool = False, force: bool = False):
