@@ -29,6 +29,7 @@ class NetworkClient:
         self.lock = threading.Lock()
         self.callback = update_callback
         self.sock = None
+        self.plugin_request_id: Optional[int] = None
         self.max_protocol_version = OPENRGB_PROTOCOL_VERSION
         if protocol_version is not None:
             if protocol_version > self.max_protocol_version:
@@ -192,6 +193,10 @@ class NetworkClient:
                     raise utils.OpenRGBDisconnected() from e
                 finally:
                     self.lock.release()
+                # OpenRGB 1.x always replies with device id 0, so use the id of the plugin that asked
+                if self.plugin_request_id is not None:
+                    device_id = self.plugin_request_id
+                    self.plugin_request_id = None
                 self.callback(device_id, packet_type, idata)
 
     def requestDeviceData(self, device: int):

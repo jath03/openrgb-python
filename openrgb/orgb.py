@@ -436,7 +436,9 @@ class OpenRGBClient(utils.RGBObject):
                     if new_plugin is not None:
                         self.plugins.append(new_plugin)
         elif type == utils.PacketType.PLUGIN_SPECIFIC:
-            next(plugin for plugin in self.plugins if plugin.id == device)._recv(data)
+            plugin = next((plugin for plugin in self.plugins if plugin.id == device), None)
+            if plugin is not None:
+                plugin._recv(data)
 
     def set_color(self, color: utils.RGBColor, fast: bool = False):
         '''
