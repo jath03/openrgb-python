@@ -26,6 +26,8 @@ class ORGBPlugin:
         if not data:
             data = bytes()
         self.comms.send_header(self.id, utils.PacketType.PLUGIN_SPECIFIC, len(data) + struct.calcsize('I'), not request)
+        if request:
+            self.comms.plugin_request_id = self.id
         data = struct.pack('I', packet_type) + data
         self.comms.send_data(data, not request)
 
